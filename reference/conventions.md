@@ -156,6 +156,15 @@ pages, read the relevant guide under `node_modules/next/dist/docs/`:
   `relative z-10`) is the approved technique if whole-card targets are ever adopted — but
   adopting it is an app-wide decision applied to every card grid at once, not per-card;
   do not introduce it piecemeal.
+- BP51. Short, non-destructive, context-returning actions (e.g. join a waiting list) render
+  as a URL-driven dialog via intercepting + parallel routes, never as a client-state-only
+  popup: keep the full page at its canonical URL (deep links, refresh, no-JS), add a
+  `@modal` slot to the group layout with a null `default.tsx` and a null catch-all page,
+  and intercept with `@modal/(.)<path>/page.tsx` rendering the SAME form component inside
+  a client dialog shell that closes via `router.back()` (parallel-routes.md, Modals).
+  Consequential, multi-step, or externally-entered flows (checkout, login, set-password,
+  cancellation) stay full pages. Never fork the copy or the form between the page and the
+  dialog — share one component so the two renderings cannot drift.
 
 ### shadcn/ui usage
 
