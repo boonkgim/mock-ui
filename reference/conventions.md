@@ -146,16 +146,16 @@ pages, read the relevant guide under `node_modules/next/dist/docs/`:
   `focus-visible:` ring replacement (shadcn primitives already ship one — don't strip it).
 - BP36. Tabular data (attendees, bookings, diary) uses the shadcn `<Table>` (real table/th
   semantics), not div grids; current-page nav links get `aria-current="page"`.
-- BP50. Whole-card click targets use the stretched-link pattern (Heydon Pickering's
-  inclusive card): `relative` on the card, ONE real `<Link>` on the title expanded with
-  `after:absolute after:inset-0` — full-card target, clean accessible name, real link
-  semantics (new-tab, copy link). Never a card-level `onClick` on a div (breaks
-  middle-click, right-click, semantics) and never nested interactive elements. Secondary
-  controls (buttons, menus) sit above the overlay with `relative z-10` so they stay
-  independently clickable. Rule of thumb: one card, one primary action → stretched primary
-  link; multiple actions → stretched title link plus explicitly separated raised controls;
-  never a card-level onClick handler. Stretch only when the card represents exactly one
-  destination — don't add duplicate links to the same URL alongside the stretched one.
+- BP50. Cards are NOT whole-clickable in this app — the standard is explicit, consistent
+  affordances: the title is a normal `<Link>`, and the footer action is a Button-rendered
+  link styled the same on every sibling card (never a button on one card and bare text on
+  its neighbour). Never a card-level `onClick` on a div (breaks middle-click, right-click,
+  semantics) and never nested interactive elements (`<a>`/`<button>` inside a wrapping
+  link). The stretched-link pattern (Heydon Pickering's inclusive card: `relative` card,
+  ONE title link with `after:absolute after:inset-0`, secondary controls raised with
+  `relative z-10`) is the approved technique if whole-card targets are ever adopted — but
+  adopting it is an app-wide decision applied to every card grid at once, not per-card;
+  do not introduce it piecemeal.
 
 ### shadcn/ui usage
 
