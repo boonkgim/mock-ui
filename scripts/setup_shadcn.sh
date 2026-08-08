@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # setup_shadcn.sh — idempotent shadcn/ui setup for the ui-mock skill.
-# Safe to re-run: init is skipped when components.json exists; add installs only components
-# whose file is missing, so re-running never overwrites anything under src/components/ui.
-# Files there are generated output and must never be hand-edited (BP40/BP41 in
-# ../reference/conventions.md) — customization belongs in wrappers under src/components/<area>/.
+# Safe to re-run: init is skipped when components.json exists; add runs only for components
+# whose file is missing (their payload may refresh registry-dependency files to registry
+# state — harmless, see the add step's comment). Files under src/components/ui are generated
+# output and must never be hand-edited (BP40/BP41 in ../reference/conventions.md) —
+# customization belongs in wrappers under src/components/<area>/.
 set -euo pipefail
 
 # Repo root: this script lives at .claude/skills/ui-mock/scripts/, four directories below it.
@@ -12,8 +13,13 @@ cd "$REPO_ROOT"
 
 # Components required by the route inventory — MUST match the "Component add-list"
 # section of ../reference/pages.md. Add there first, then here.
-COMPONENTS=(alert badge button card checkbox dialog dropdown-menu input label select
+COMPONENTS=(alert badge button card checkbox dialog dropdown-menu field input label select
   separator skeleton table tabs textarea)
+
+# npm packages BP53 (client form validation) builds on. The `field` registry item is
+# validation-library-agnostic and does NOT install these; the old `form` registry item
+# that used to pull in react-hook-form is an empty stub in the base-nova registry.
+FORM_DEPS=(react-hook-form zod @hookform/resolvers)
 
 # --- Check: Tailwind 4 must already be installed (shadcn init targets the Tailwind-4
 # @theme token pattern; on Tailwind 3 it would generate an incompatible config).
@@ -73,12 +79,17 @@ if [ ! -f components.json ]; then
   fi
 fi
 
-# --- Add components — but only those whose generated file is missing. No --overwrite:
-# re-runs stay idempotent because already-present components are skipped, so this script
-# never destroys an existing file. Note this is a safety property, not license to edit:
-# BP40/BP41 in reference/conventions.md forbid hand edits to src/components/ui files —
-# customization goes in wrapper components under src/components/<area>/. To force a fresh
-# copy of one component, delete its file in src/components/ui/ and re-run.
+# --- Add components — but only those whose generated file is missing. `--overwrite` is
+# passed for the ADD PAYLOAD's sake, not to re-add present components: a missing
+# component's payload can include registry dependencies whose files already exist (e.g.
+# `field` ships label + separator), and without the flag the CLI blocks on an interactive
+# overwrite prompt that piped input cannot answer (the prompt library needs a TTY).
+# Refreshing those files to registry state is safe BECAUSE of BP40/BP41 in
+# reference/conventions.md: src/components/ui files are generated output that is never
+# hand-edited, so there is nothing of ours to destroy — customization goes in wrapper
+# components under src/components/<area>/. The prettier pass below restores repo
+# formatting (the registry ships its own style). To force a fresh copy of one component,
+# delete its file in src/components/ui/ and re-run.
 MISSING=()
 for c in "${COMPONENTS[@]}"; do
   # shadcn registry names map 1:1 to generated kebab-case filenames (button -> button.tsx).
@@ -88,10 +99,35 @@ for c in "${COMPONENTS[@]}"; do
 done
 if [ "${#MISSING[@]}" -eq 0 ]; then
   echo "OK: all ${#COMPONENTS[@]} components already present in src/components/ui — nothing to add."
-elif ! npx shadcn@latest add --yes "${MISSING[@]}"; then  # --yes: non-interactive
-  echo "ERROR: 'npx shadcn@latest add' failed. Check network access and that every name in" >&2
-  echo "       COMPONENTS matches the add-list in reference/pages.md (registry names)." >&2
-  exit 3
+else
+  if ! npx shadcn@latest add --yes --overwrite "${MISSING[@]}"; then  # --yes: non-interactive
+    echo "ERROR: 'npx shadcn@latest add' failed. Check network access and that every name in" >&2
+    echo "       COMPONENTS matches the add-list in reference/pages.md (registry names)." >&2
+    exit 3
+  fi
+  # The registry emits its own formatting; reconcile with the repo's prettier config so
+  # generated files don't show up as perpetual diffs. No-op where prettier is absent.
+  npx --no-install prettier --write src/components/ui >/dev/null 2>&1 || true
+fi
+
+# --- Form-validation deps (BP53): react-hook-form + zod + @hookform/resolvers. Installed
+# here (not via the registry — see FORM_DEPS note above). Idempotent: skipped when every
+# package is already in package.json.
+NEED_DEPS=()
+for d in "${FORM_DEPS[@]}"; do
+  if ! node -e "
+    const p = require('./package.json');
+    process.exit((p.dependencies && p.dependencies['$d']) || (p.devDependencies && p.devDependencies['$d']) ? 0 : 1);
+  "; then
+    NEED_DEPS+=("$d")
+  fi
+done
+if [ "${#NEED_DEPS[@]}" -gt 0 ]; then
+  if ! npm install "${NEED_DEPS[@]}"; then
+    echo "ERROR: npm install ${NEED_DEPS[*]} failed — BP53 client validation cannot compile" >&2
+    echo "       without these packages. Check network access and retry." >&2
+    exit 7
+  fi
 fi
 
 # --- Font-wiring reconciliation: whatever variable names the shadcn registry emitted in

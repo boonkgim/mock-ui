@@ -13,7 +13,7 @@ Reference files (read by subagents, not by this orchestrating turn):
 
 - `.claude/skills/ui-mock/reference/pages.md` — full route inventory per group: purpose,
   shadcn components, mock data, group-level extras, component add-list.
-- `.claude/skills/ui-mock/reference/conventions.md` — design findings 1–5, BP1–BP52,
+- `.claude/skills/ui-mock/reference/conventions.md` — design findings 1–5, BP1–BP53,
   AP1–AP32, Next 16 docs pointers. Doubles as the reflection-loop review checklist.
 
 Source-of-truth docs (the business spec; reference files describe structure only):

@@ -9,7 +9,7 @@ are mechanical class-name greps covered by `npx impeccable detect` in
 
 - Next.js 16 docs to consult
 - Design findings (1–5)
-- Best practices — DO / DON'T (BP1–BP50)
+- Best practices — DO / DON'T (BP1–BP53)
 - AI UI anti-patterns to avoid (AP1–AP32)
 
 ## Next.js 16 docs to consult
@@ -121,14 +121,33 @@ pages, read the relevant guide under `node_modules/next/dist/docs/`:
 - BP25. Actions used with useActionState take `(prevState, formData)` and return a typed
   state (e.g. `{ status: 'idle' | 'error' | 'success'; message?: string; fieldErrors?:
   Record<string, string> }`) declared next to the action; no `any` state.
-- BP26. Submit buttons reflect the `pending` boolean from useActionState:
-  `disabled={pending}` plus visible pending text — never a silent unresponsive submit.
-- BP27. Inputs carry `name` attributes read via `formData.get()`; simple forms stay
-  progressively enhanced (uncontrolled, work pre-hydration).
+- BP26. Submit buttons reflect both validity and pending: on client-validated forms (BP53)
+  `disabled={!isValid || pending}` — the button unlocks only once the form is valid — plus
+  visible pending text; never a silent unresponsive submit. Forms with nothing to validate
+  client-side disable on `pending` alone.
+- BP27. Inputs carry `name` attributes read via `formData.get()` — the FormData contract
+  with the action holds even when react-hook-form controls the inputs (Controller spreads
+  `name`). Forms with nothing to validate client-side (confirm-only, selects that always
+  hold a valid default) stay uncontrolled and progressively enhanced.
 - BP28. On success: `revalidatePath()` (or `refresh()`) then `redirect()` — in that order,
   because `redirect` throws and code after it never runs.
 - BP29. Action error messages render near the form in an `aria-live="polite"` element fed
   from action state.
+- BP53. Forms with client-validatable input (free text, required checkboxes/selects) never
+  surface the browser's native validation bubbles (unstylable, inconsistent per browser):
+  the `<form>` gets `noValidate`, and validation runs client-side via react-hook-form +
+  zod (`useForm` + `zodResolver`, `mode: 'onTouched'`, explicit `defaultValues`), rendered
+  through the shadcn Field primitives — each input wrapped in `<Controller>` rendering
+  `<Field data-invalid>` + `<FieldLabel>` + the control (with `aria-invalid`) +
+  `<FieldError>`; the form body sits in a `<FieldGroup>` (its gap replaces `space-y-*`).
+  Keep semantic input types (`email`, `tel`) — `noValidate` strips their validation, not
+  their mobile-keyboard semantics. The client zod schema mirrors the server action's
+  checks with IDENTICAL error copy — the server stays the source of truth (BP16, BP24,
+  BP25 unchanged) — and server `fieldErrors` are mapped into the same per-field slots via
+  `form.setError(name, { type: 'server', message })` in an effect, so the two sources
+  cannot render differently. Submission stays the server action: `action={formAction}`
+  plus an onSubmit guard (`if (!isValid) { event.preventDefault(); form.trigger(); }`).
+  Exemplar: `src/components/public/waiting-list-form.tsx`.
 
 ### Accessibility
 

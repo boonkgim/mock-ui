@@ -10,7 +10,7 @@
 
 Each group section lists every route: URL, page file, purpose, key shadcn components, and the
 mock data shown. Routes marked **form** get a colocated `actions.ts` (server action +
-useActionState typed state, per BP23–BP29). Each group section ends with its group-level
+useActionState typed state, per BP23–BP29 and BP53). Each group section ends with its group-level
 extras. Rules and ids (BPnn/APnn) referenced here are defined in `conventions.md`.
 
 ## Domain & brand (binding — do not invent)
@@ -95,5 +95,10 @@ on `/admin`, per auth decisions), `loading.tsx`, `error.tsx`,
 
 ## Component add-list (must match scripts/setup_shadcn.sh)
 
-alert, badge, button, card, checkbox, dialog, dropdown-menu, input, label, select,
+alert, badge, button, card, checkbox, dialog, dropdown-menu, field, input, label, select,
 separator, skeleton, table, tabs, textarea
+
+Form validation (BP53) additionally needs the npm packages `react-hook-form`, `zod` and
+`@hookform/resolvers` — `setup_shadcn.sh` installs them (the `field` registry item is
+validation-library-agnostic and does not pull them in; the old `form` registry item is an
+empty stub in the base-nova registry — do not add it).
