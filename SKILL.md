@@ -18,9 +18,12 @@ Reference files (read by subagents, not by this orchestrating turn):
 
 ## Phase 1 — Toolkit setup (script)
 
-Run `bash .claude/skills/ui-mock/scripts/setup_shadcn.sh`. Idempotent: verifies Tailwind 4,
-runs `shadcn init` only when `components.json` is missing (this rewrites `globals.css` to the
-token pattern — intended), adds the components the inventory needs, verifies the results.
+Run `bash .claude/skills/ui-mock/scripts/setup_shadcn.sh`. Idempotent: verifies Tailwind 4;
+on first run (no `components.json`) removes the create-next-app scaffold (default
+`src/app/page.tsx`, demo `public/` svgs) and normalizes the layout's font variables to the
+shadcn names; runs `shadcn init` only on that first run (this rewrites `globals.css` to the
+token pattern — intended); adds the components the inventory needs; reconciles the
+globals.css font wiring; verifies the results.
 On non-zero exit, stop and report the script's ERROR line to the user.
 
 ## Phase 2 — Mock data (subagent)
@@ -45,8 +48,9 @@ for `(public)`, `(customer)`, `(admin)`. Each dispatch:
   `src/lib/mock-data.ts`.
 - Task: build every route of its group under `src/app/(<group>)/` — page.tsx, group
   layout.tsx/loading.tsx/error.tsx, not-found.tsx and actions.ts where pages.md says so —
-  plus feature components under `src/components/<area>/`. The `(public)` agent also deletes
-  the default `src/app/page.tsx` (pages.md, Shared structure).
+  plus feature components under `src/components/<area>/`. The `(public)` agent also verifies
+  no `src/app/page.tsx` remains (Phase 1 removes the scaffold one; two pages resolving to
+  `/` is a build error — pages.md, Shared structure).
 - Return: files written with line counts — at most 12 lines (group related files onto one
   line if needed to stay under the cap).
 

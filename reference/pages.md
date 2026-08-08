@@ -18,8 +18,10 @@ extras. Rules and ids (BPnn/APnn) referenced here are defined in `conventions.md
 - One root layout — the existing `src/app/layout.tsx` — owns `<html>`/`<body>`. The three
   areas are route groups `(public)`, `(customer)`, `(admin)` under it; group layouts return
   plain wrappers with the area shell (BP18–BP19, design finding 3).
-- The default `src/app/page.tsx` from create-next-app **must be deleted** when
-  `src/app/(public)/page.tsx` is created — two pages resolving to `/` is a build error (BP20).
+- The default `src/app/page.tsx` from create-next-app is removed by the Phase 1 setup
+  script (first-run scaffold cleanup). The `(public)` agent must still verify it is gone
+  before creating `src/app/(public)/page.tsx` — two pages resolving to `/` is a build
+  error (BP20).
 - Every page exports `metadata` (or `generateMetadata`) with a distinct title (BP22); the
   root layout sets a `title.template`.
 - Dynamic-segment pages call `notFound()` on unknown ids and have a sibling `not-found.tsx`

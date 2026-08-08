@@ -27,6 +27,33 @@ if ! node -e '
   exit 1
 fi
 
+# --- First-run scaffold cleanup: remove create-next-app leftovers before init. Gated on
+# the same first-run marker as init (no components.json yet) so re-runs never touch files
+# the skill's own agents have since created.
+if [ ! -f components.json ]; then
+  # Default root page — only when it is recognizably the scaffold (references the demo
+  # assets), never a hand-written page. The (public) group later owns "/" via
+  # src/app/(public)/page.tsx; leaving this file in place is a duplicate-route build error (BP20).
+  if [ -f src/app/page.tsx ] && grep -qE '/next\.svg|create-next-app' src/app/page.tsx; then
+    rm src/app/page.tsx
+    echo "cleanup: removed scaffold src/app/page.tsx"
+  fi
+  # Demo assets shipped by create-next-app; nothing in the skill's pages uses them.
+  for f in public/next.svg public/vercel.svg public/globe.svg public/file.svg public/window.svg; do
+    if [ -f "$f" ]; then
+      rm "$f"
+      echo "cleanup: removed scaffold $f"
+    fi
+  done
+  # Scaffold font variables: create-next-app names them --font-geist-*, but shadcn's
+  # generated globals.css wires body text to var(--font-sans). A mismatch leaves
+  # --font-sans self-referential (guaranteed-invalid), silently dropping every page to
+  # the browser's default serif. Normalize to the canonical shadcn names up front.
+  if [ -f src/app/layout.tsx ]; then
+    sed -i "s/--font-geist-sans/--font-sans/g; s/--font-geist-mono/--font-mono/g" src/app/layout.tsx
+  fi
+fi
+
 # --- Init: only when components.json is missing (that file is shadcn's marker of an
 # initialized project, which is what makes this step idempotent).
 if [ ! -f components.json ]; then
@@ -67,6 +94,13 @@ elif ! npx shadcn@latest add --yes "${MISSING[@]}"; then  # --yes: non-interacti
   exit 3
 fi
 
+# --- Font-wiring reconciliation: whatever variable names the shadcn registry emitted in
+# globals.css, point them at the canonical names the layout now declares. Idempotent (a
+# no-op once the names already match).
+if [ -f src/app/globals.css ]; then
+  sed -i "s/var(--font-geist-sans)/var(--font-sans)/g; s/var(--font-geist-mono)/var(--font-mono)/g" src/app/globals.css
+fi
+
 # --- Post-conditions: the two artifacts every page build depends on.
 if [ ! -f src/lib/utils.ts ]; then
   echo "ERROR: src/lib/utils.ts missing after init — the cn() helper (BP39) is unavailable." >&2
@@ -78,6 +112,19 @@ if [ ! -d src/components/ui ]; then
   echo "       Re-run this script; if it persists, run the add command above manually." >&2
   exit 5
 fi
+# Every font variable globals.css consumes must resolve at runtime: either next/font
+# declares it in layout.tsx, or globals.css itself defines it with a non-self-referential
+# value (e.g. --font-heading: var(--font-sans)). A dangling name means body text silently
+# falls back to the browser default serif — the bug this guards against.
+while read -r ref; do
+  name="${ref#var(}"; name="${name%)}"
+  if grep -q -- "'${name}'" src/app/layout.tsx; then continue; fi
+  if grep -E -- "${name}:" src/app/globals.css | grep -vq -- "var(${name})"; then continue; fi
+  echo "ERROR: globals.css references ${ref} but ${name} is neither declared by next/font" >&2
+  echo "       in src/app/layout.tsx nor defined non-self-referentially in globals.css." >&2
+  echo "       Body text would fall back to the browser default font." >&2
+  exit 6
+done < <(grep -ohE 'var\(--font-[a-z0-9-]+\)' src/app/globals.css | sort -u)
 
 echo "OK: shadcn ready — components.json present, src/lib/utils.ts present," \
   "$(ls src/components/ui | wc -l) files in src/components/ui."
