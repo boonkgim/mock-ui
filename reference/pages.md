@@ -19,10 +19,13 @@ extras. Rules and ids (BPnn/APnn) referenced here are defined in `conventions.md
   entity/field lists, delivery rules, scope — comes from the newest `docs/<date>-setup/`
   PRD and data model, distilled per run into `.cache/ui-mock/facts.md` (SKILL.md Phase 0).
   Never default or invent when those are silent: flag the gap instead (BP52).
-- This section holds only placeholders the PRD lacks. Currently one: brand/site name is
-  **"The AI Workshop"** until the user supplies a real name; use it verbatim everywhere a
-  name is needed (root layout `title`, nav, footer) and do not coin any other. To rebrand
-  later: this line plus the root layout.
+- This section holds only placeholders and decisions the PRD lacks. Currently two:
+  - Brand/site name is **"The AI Workshop"** until the user supplies a real name; use it
+    verbatim everywhere a name is needed (root layout `title`, nav, footer) and do not
+    coin any other. To rebrand later: this line plus the root layout.
+  - Money display always carries the explicit **"S$" prefix** (user decision 2026-08-08):
+    a bare "$" is ambiguous with USD, and no Intl locale renders SGD as "S$", so
+    formatters compose Intl number grouping with a literal `S$`.
 
 ## Shared structure
 
