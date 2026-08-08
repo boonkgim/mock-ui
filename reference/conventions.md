@@ -9,7 +9,7 @@ are mechanical class-name greps covered by `npx impeccable detect` in
 
 - Next.js 16 docs to consult
 - Design findings (1–5)
-- Best practices — DO / DON'T (BP1–BP49)
+- Best practices — DO / DON'T (BP1–BP50)
 - AI UI anti-patterns to avoid (AP1–AP32)
 
 ## Next.js 16 docs to consult
@@ -146,6 +146,16 @@ pages, read the relevant guide under `node_modules/next/dist/docs/`:
   `focus-visible:` ring replacement (shadcn primitives already ship one — don't strip it).
 - BP36. Tabular data (attendees, bookings, diary) uses the shadcn `<Table>` (real table/th
   semantics), not div grids; current-page nav links get `aria-current="page"`.
+- BP50. Whole-card click targets use the stretched-link pattern (Heydon Pickering's
+  inclusive card): `relative` on the card, ONE real `<Link>` on the title expanded with
+  `after:absolute after:inset-0` — full-card target, clean accessible name, real link
+  semantics (new-tab, copy link). Never a card-level `onClick` on a div (breaks
+  middle-click, right-click, semantics) and never nested interactive elements. Secondary
+  controls (buttons, menus) sit above the overlay with `relative z-10` so they stay
+  independently clickable. Rule of thumb: one card, one primary action → stretched primary
+  link; multiple actions → stretched title link plus explicitly separated raised controls;
+  never a card-level onClick handler. Stretch only when the card represents exactly one
+  destination — don't add duplicate links to the same URL alongside the stretched one.
 
 ### shadcn/ui usage
 

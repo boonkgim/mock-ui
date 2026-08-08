@@ -26,6 +26,14 @@ extras. Rules and ids (BPnn/APnn) referenced here are defined in `conventions.md
 - Brand/site name: **"The AI Workshop"** — a placeholder until the user supplies a real
   name; use it verbatim everywhere a name is needed (root layout `title`, nav, footer) and
   do not coin any other. To rebrand later: this line plus the root layout.
+- Currency: **read it from the PRD and data model — never default to one.** The PRD's
+  pricing section and the data model's currency constraints are the source of truth (at
+  the time of writing: SGD, integer cents, `checkout_currency_sgd`). Format money with
+  `Intl.NumberFormat` using the locale matching that currency's country. Display prices
+  exactly as the PRD says (currently tax-inclusive, **no separate tax line at checkout**);
+  never invent a VAT/tax breakdown the PRD excludes.
+- Timezone/locale: also read from the PRD (one business, one timezone; times local to the
+  business). Use the matching locale for dates and times.
 
 ## Shared structure
 
