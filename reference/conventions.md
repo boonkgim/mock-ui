@@ -9,7 +9,7 @@ are mechanical class-name greps covered by `npx impeccable detect` in
 
 - Next.js 16 docs to consult
 - Design findings (1–5)
-- Best practices — DO / DON'T (BP1–BP53)
+- Best practices — DO / DON'T (BP1–BP54)
 - AI UI anti-patterns to avoid (AP1–AP32)
 
 ## Next.js 16 docs to consult
@@ -199,6 +199,22 @@ pages, read the relevant guide under `node_modules/next/dist/docs/`:
   are equally findings. Anything on the PRD's not-in-scope list must not appear in the UI.
   When the spec is silent on a fact the UI needs, flag the gap (return it to the
   orchestrator or mark it in the review) — never fill it from a plausible prior.
+- BP54. UI copy is not prose: every descriptive slot — page lede, `CardDescription`,
+  `DialogDescription`, `AlertDescription`, empty state — holds ONE short sentence.
+  Long-form paragraphs belong only where the content genuinely IS an article (a workshop's
+  own description, marketing body, docs). Required or dense information that cannot be cut
+  changes UI PATTERN, not sentence length: a scannable list with icons, Badges, a
+  definition/table row, a collapsible, or its own element beside the message — never
+  another clause bolted onto an existing paragraph. State a fact ONCE per screen: terms
+  and caveats render at the point of commitment, as their own element next to the submit
+  control; the success state is a short receipt ("Thanks — you are on the list" + one
+  line) and the terms persist as a SIBLING of that receipt rather than being restated
+  inside it. Offer surfaces elsewhere (a card, an alert linking to the real screen) carry
+  a one-line invitation and defer the full terms to the screen where the action happens.
+  Exemplar: `src/components/public/waiting-list-copy.ts` — a lede function, a one-line
+  offer string, and `waitingListTerms` as a string ARRAY, rendered by the `WaitingListTerms`
+  list component in `src/components/public/waiting-list-form.tsx` under both the submit
+  button and the success Alert.
 
 ### shadcn/ui usage
 

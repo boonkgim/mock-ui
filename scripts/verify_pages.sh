@@ -103,6 +103,21 @@ else
     "not machine-checked this run."
 fi
 
+# --- Check 7: BP54 copy density — a descriptive slot holding a paragraph. Literal
+# strings only: interpolated content (`{workshop.description}`) is legitimately
+# long and is not matched, and multi-line slots plus the judgment half of BP54
+# (the same fact stated twice on one screen) stay with the reviewers.
+echo "===== BP54 copy density: description literals over ~200 chars =====" >>"$LOG"
+DENSITY_HITS="$(grep -rEn --include='*.tsx' \
+  '<[A-Za-z]*Description>[^<{]{200,}<|description="[^"]{200,}"' src || true)"
+if [ -n "$DENSITY_HITS" ]; then
+  printf '%s\n' "$DENSITY_HITS" >>"$LOG"
+  fail "BP54 copy density: paragraph-length description literal in $(printf '%s\n' \
+    "$DENSITY_HITS" | cut -d: -f1 | sort -u | tr '\n' ' ')(details: $LOG)"
+else
+  pass "BP54 copy density (no paragraph-length description literals)"
+fi
+
 echo "----------------------------------------"
 if [ "$FAILURES" -gt 0 ]; then
   echo "RESULT: $FAILURES check(s) failed. Full command output: $LOG"
