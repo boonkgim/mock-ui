@@ -13,6 +13,20 @@ mock data shown. Routes marked **form** get a colocated `actions.ts` (server act
 useActionState typed state, per BP23–BP29). Each group section ends with its group-level
 extras. Rules and ids (BPnn/APnn) referenced here are defined in `conventions.md`.
 
+## Domain & brand (binding — do not invent)
+
+- The business is the one in `docs/2026-08-04-setup/04-prd.html`: a single operator selling
+  **paid AI workshops** — short taught sessions on artificial-intelligence topics, each with
+  its own subject, length and price, repeated on scheduled dates. All mock content (workshop
+  titles, descriptions, learner names' context, admin copy) must render THIS business —
+  never substitute a different trade.
+- Delivery is **per run** (data model, `06-data-model.html`): a run is either in-person
+  (has a venue address) or online (has a joining link revealed only to a paid booking).
+  Mock data includes both kinds and the UI surfaces the distinction.
+- Brand/site name: **"The AI Workshop"** — a placeholder until the user supplies a real
+  name; use it verbatim everywhere a name is needed (root layout `title`, nav, footer) and
+  do not coin any other. To rebrand later: this line plus the root layout.
+
 ## Shared structure
 
 - One root layout — the existing `src/app/layout.tsx` — owns `<html>`/`<body>`. The three
