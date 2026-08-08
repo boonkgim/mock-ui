@@ -13,7 +13,7 @@ Reference files (read by subagents, not by this orchestrating turn):
 
 - `.claude/skills/ui-mock/reference/pages.md` — full route inventory per group: purpose,
   shadcn components, mock data, group-level extras, component add-list.
-- `.claude/skills/ui-mock/reference/conventions.md` — design findings 1–5, BP1–BP54,
+- `.claude/skills/ui-mock/reference/conventions.md` — design findings 1–5, BP1–BP56,
   AP1–AP32, Next 16 docs pointers. Doubles as the reflection-loop review checklist.
 
 Source-of-truth docs (the business spec; reference files describe structure only):
@@ -89,10 +89,13 @@ For round R = 1, then R = 2, over the groups not yet passed:
      and `.claude/skills/ui-mock/reference/conventions.md` (score against every BP/AP id,
      skipping items tagged `[scan]` — `verify_pages.sh` checks those mechanically). Output:
      findings to `.cache/ui-mock/review-<group>-r<R>.md`, each citing rule id + file + line.
-     Include an explicit BP54 copy pass, screen by screen: each descriptive slot (lede,
+     Include an explicit BP54–BP56 pass, screen by screen: each descriptive slot (lede,
      Card/Dialog/Alert description, empty state) is one short sentence, dense facts take a
-     list/badge/row pattern rather than a longer sentence, and no fact — terms, caveats,
-     policy lines — is stated twice on one screen (e.g. restated inside a success message).
+     list/badge/row/footnote pattern rather than a longer sentence, and no fact — terms,
+     caveats, policy lines — is stated twice on one screen (e.g. restated inside a success
+     message). Then walk each screen's states in turn: the heading must still be true in
+     every one of them (BP55), and a dialog that changes height between states must be
+     anchored rather than centred (BP56).
    - *Spec-fidelity reviewer*: inputs (paths) = the same group dirs, `.cache/ui-mock/facts.md`,
      and the source PRD + data-model files. Diff the built UI against the spec in BOTH
      directions: every required fact present (form fields vs entity columns, copy claims vs
