@@ -13,8 +13,29 @@ Reference files (read by subagents, not by this orchestrating turn):
 
 - `.claude/skills/ui-mock/reference/pages.md` — full route inventory per group: purpose,
   shadcn components, mock data, group-level extras, component add-list.
-- `.claude/skills/ui-mock/reference/conventions.md` — design findings 1–5, BP1–BP49,
+- `.claude/skills/ui-mock/reference/conventions.md` — design findings 1–5, BP1–BP52,
   AP1–AP32, Next 16 docs pointers. Doubles as the reflection-loop review checklist.
+
+Source-of-truth docs (the business spec; reference files describe structure only):
+
+- the newest `docs/<date>-setup/` PRD (`NN-prd.html`) and data model (`NN-data-model.html`).
+  Every domain fact — names, fields, prices, currency, statuses, visibility, scope — comes
+  from these, per BP52. `.cache/ui-mock/facts.md` is their per-run distillation (Phase 0).
+
+## Phase 0 — Ground truth (subagent)
+
+Dispatch one subagent:
+
+- Inputs (paths): the newest `docs/<date>-setup/` PRD and data-model HTML files, and
+  `.claude/skills/ui-mock/reference/pages.md` (Domain & brand section, for placeholders
+  the PRD lacks, e.g. the brand name).
+- Task: write `.cache/ui-mock/facts.md` — the compact fact sheet later agents build from:
+  brand/site name; currency, price display and tax rule; timezone/locale; per-entity
+  column lists for every capture form and displayed record (copied from the data model,
+  including nullability pairings); run delivery rules; visibility rules (who sees what,
+  when); and the PRD's not-in-scope list verbatim.
+- Return: the file path, its line count, and the headline facts (brand, currency,
+  timezone) — at most 8 lines.
 
 ## Phase 1 — Toolkit setup (script)
 
@@ -31,11 +52,14 @@ On non-zero exit, stop and report the script's ERROR line to the user.
 Dispatch one subagent:
 
 - Inputs (paths): `.claude/skills/ui-mock/reference/pages.md`,
-  `.claude/skills/ui-mock/reference/conventions.md` (BP47–BP49 and design finding 5 govern
-  this phase).
+  `.claude/skills/ui-mock/reference/conventions.md` (BP47–BP49, BP52 and design finding 5
+  govern this phase), `.cache/ui-mock/facts.md`, and the source PRD + data-model files.
 - Task: write `src/lib/types.ts` (all domain interfaces) and `src/lib/mock-data.ts` (single
   module, starts with `import 'server-only'`, async accessor functions only, edge-state
-  records per BP49 so every UI state in pages.md is demonstrable).
+  records per BP49 so every UI state in pages.md is demonstrable). Structure comes from
+  pages.md; every domain fact comes from facts.md and the source docs — interfaces mirror
+  the data model's columns (BP52); when the spec is silent, flag the gap in the return
+  instead of inventing.
 - Return: each file written with its line count — at most 6 lines.
 
 ## Phase 3 — Three group agents (one message)
@@ -45,7 +69,9 @@ for `(public)`, `(customer)`, `(admin)`. Each dispatch:
 
 - Inputs (paths): `.claude/skills/ui-mock/reference/pages.md` (its group's section),
   `.claude/skills/ui-mock/reference/conventions.md`, `src/lib/types.ts`,
-  `src/lib/mock-data.ts`.
+  `src/lib/mock-data.ts`, `.cache/ui-mock/facts.md`, and the source PRD + data-model
+  files. Structure from pages.md; domain facts from facts.md and the source docs (BP52) —
+  form fields mirror the entity's columns; unspecified facts get flagged, not invented.
 - Task: build every route of its group under `src/app/(<group>)/` — page.tsx, group
   layout.tsx/loading.tsx/error.tsx, not-found.tsx and actions.ts where pages.md says so —
   plus feature components under `src/components/<area>/`. The `(public)` agent also verifies
@@ -58,21 +84,28 @@ for `(public)`, `(customer)`, `(admin)`. Each dispatch:
 
 For round R = 1, then R = 2, over the groups not yet passed:
 
-1. **Reviewers** — dispatch one reviewer subagent per remaining group, all in one message.
-   Each: inputs (paths) = `src/app/(<group>)/`, `src/components/<area>/`, and
-   `.claude/skills/ui-mock/reference/conventions.md` (score against every BP/AP id, skipping
-   items tagged `[scan]` — `verify_pages.sh` checks those mechanically). Output: findings to
-   `.cache/ui-mock/review-<group>-r<R>.md`, each finding citing rule id + file + line.
-   Return: verdict PASS/FAIL, finding count, failing rule ids, and the files they name — at
-   most 15 lines. PASS with zero findings is a real, expected verdict — do not manufacture
-   findings.
-2. A group returning PASS with 0 findings is done. Pass bar: **all findings resolved** —
-   no partial credit.
+1. **Reviewers** — dispatch TWO reviewer subagents per remaining group, all in one message:
+   - *Conventions reviewer*: inputs (paths) = `src/app/(<group>)/`, `src/components/<area>/`,
+     and `.claude/skills/ui-mock/reference/conventions.md` (score against every BP/AP id,
+     skipping items tagged `[scan]` — `verify_pages.sh` checks those mechanically). Output:
+     findings to `.cache/ui-mock/review-<group>-r<R>.md`, each citing rule id + file + line.
+   - *Spec-fidelity reviewer*: inputs (paths) = the same group dirs, `.cache/ui-mock/facts.md`,
+     and the source PRD + data-model files. Diff the built UI against the spec in BOTH
+     directions: every required fact present (form fields vs entity columns, copy claims vs
+     PRD rules) and nothing unrequested invented (features, fields, price lines the PRD
+     excludes). Output: findings to `.cache/ui-mock/fidelity-<group>-r<R>.md`, each citing
+     BP52 + file + line + the spec passage it violates.
+   Both return: verdict PASS/FAIL, finding count, failing rule ids, and the files they
+   name — at most 15 lines each. PASS with zero findings is a real, expected verdict — do
+   not manufacture findings.
+2. A group is done when BOTH its reviewers return PASS with 0 findings. Pass bar: **all
+   findings resolved** — no partial credit.
 3. **Fixers** — for each failing group, dispatch one fixer subagent per named file (one
-   message per group, fixers in parallel). Each: inputs (paths) =
-   `.cache/ui-mock/review-<group>-r<R>.md` plus its single file path; task = apply that
-   file's findings; return = the file path and its new line count — at most 2 lines.
-   A finding spanning multiple files goes to one fixer owning exactly those files.
+   message per group, fixers in parallel). Each: inputs (paths) = whichever of
+   `.cache/ui-mock/review-<group>-r<R>.md` / `.cache/ui-mock/fidelity-<group>-r<R>.md`
+   named its file, plus that single file path; task = apply that file's findings; return =
+   the file path and its new line count — at most 2 lines. A finding spanning multiple
+   files goes to one fixer owning exactly those files.
 4. Never read the review files in this orchestrating turn — route on the returned rule ids
    and file lists only.
 

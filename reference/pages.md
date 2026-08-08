@@ -15,25 +15,14 @@ extras. Rules and ids (BPnn/APnn) referenced here are defined in `conventions.md
 
 ## Domain & brand (binding — do not invent)
 
-- The business is the one in `docs/2026-08-04-setup/04-prd.html`: a single operator selling
-  **paid AI workshops** — short taught sessions on artificial-intelligence topics, each with
-  its own subject, length and price, repeated on scheduled dates. All mock content (workshop
-  titles, descriptions, learner names' context, admin copy) must render THIS business —
-  never substitute a different trade.
-- Delivery is **per run** (data model, `06-data-model.html`): a run is either in-person
-  (has a venue address) or online (has a joining link revealed only to a paid booking).
-  Mock data includes both kinds and the UI surfaces the distinction.
-- Brand/site name: **"The AI Workshop"** — a placeholder until the user supplies a real
-  name; use it verbatim everywhere a name is needed (root layout `title`, nav, footer) and
-  do not coin any other. To rebrand later: this line plus the root layout.
-- Currency: **read it from the PRD and data model — never default to one.** The PRD's
-  pricing section and the data model's currency constraints are the source of truth (at
-  the time of writing: SGD, integer cents, `checkout_currency_sgd`). Format money with
-  `Intl.NumberFormat` using the locale matching that currency's country. Display prices
-  exactly as the PRD says (currently tax-inclusive, **no separate tax line at checkout**);
-  never invent a VAT/tax breakdown the PRD excludes.
-- Timezone/locale: also read from the PRD (one business, one timezone; times local to the
-  business). Use the matching locale for dates and times.
+- Every domain fact — business domain, currency and price display, timezone/locale,
+  entity/field lists, delivery rules, scope — comes from the newest `docs/<date>-setup/`
+  PRD and data model, distilled per run into `.cache/ui-mock/facts.md` (SKILL.md Phase 0).
+  Never default or invent when those are silent: flag the gap instead (BP52).
+- This section holds only placeholders the PRD lacks. Currently one: brand/site name is
+  **"The AI Workshop"** until the user supplies a real name; use it verbatim everywhere a
+  name is needed (root layout `title`, nav, footer) and do not coin any other. To rebrand
+  later: this line plus the root layout.
 
 ## Shared structure
 
@@ -60,7 +49,7 @@ extras. Rules and ids (BPnn/APnn) referenced here are defined in `conventions.md
 | `/dates` | `dates/page.tsx` | Upcoming-dates list across workshops | Table, Badge, Button | All future runs sorted by date, seats remaining |
 | `/workshops/[slug]/waiting-list` | `workshops/[slug]/waiting-list/page.tsx` | Waiting-list join screen — **form** | Card, Input, Label, Button, Alert | Workshop + sold-out run being waited on |
 | `/checkout/[runId]` | `checkout/[runId]/page.tsx` | Payment/checkout (Stripe embedded) — **form** | Card, Separator, Button | Run summary, price breakdown; Stripe embed is a `'use client'` leaf placeholder (BP2) |
-| `/checkout/[runId]/confirmation` | `checkout/[runId]/confirmation/page.tsx` | Booking confirmation | Card, Badge, Button | Confirmed booking: reference, run, learner count |
+| `/checkout/[runId]/confirmation` | `checkout/[runId]/confirmation/page.tsx` | Booking confirmation | Card, Badge, Button | Confirmed booking: run, learner count, amount paid and how it was paid |
 | `/bookings/[bookingId]/learner-details` | `bookings/[bookingId]/learner-details/page.tsx` | Learner-details capture — **form** | Card, Input, Label, Select, Checkbox, Button | Booking with learners still to be named |
 | `/set-password` | `set-password/page.tsx` | Set / reset password (accounts created passwordless by booking flow) — **form** | Card, Input, Label, Button, Alert | None (token arrives via searchParams — BP8/BP9) |
 | `/login` | `login/page.tsx` | Login — **form** | Card, Input, Label, Button, Alert | None |

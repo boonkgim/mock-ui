@@ -165,6 +165,13 @@ pages, read the relevant guide under `node_modules/next/dist/docs/`:
   Consequential, multi-step, or externally-entered flows (checkout, login, set-password,
   cancellation) stay full pages. Never fork the copy or the form between the page and the
   dialog — share one component so the two renderings cannot drift.
+- BP52. No invention: every domain noun, form field, price rule, status, and copy fact must
+  be traceable to the PRD, the data model, pages.md, or `.cache/ui-mock/facts.md`. Capture
+  forms mirror their entity's columns exactly (names, required/optional, nullability
+  pairings) — a required column missing from a form and a field the spec never asked for
+  are equally findings. Anything on the PRD's not-in-scope list must not appear in the UI.
+  When the spec is silent on a fact the UI needs, flag the gap (return it to the
+  orchestrator or mark it in the review) — never fill it from a plausible prior.
 
 ### shadcn/ui usage
 
