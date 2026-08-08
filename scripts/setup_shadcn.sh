@@ -35,9 +35,11 @@ if [ ! -f components.json ]; then
   # 2-token prefers-color-scheme file must not be preserved — without @theme inline,
   # semantic classes like bg-primary silently stop resolving.
   #   --yes            accept all defaults, never prompt (non-interactive/CI-safe)
-  #   --base-color neutral  the stock out-of-the-box shadcn look; restyling later is a
-  #                    one-file edit of the globals.css tokens, per the skill's bar
-  if ! npx shadcn@latest init --yes --base-color neutral; then
+  #   --defaults       shadcn CLI 4.x dropped --base-color; this picks the CLI's stock
+  #                    preset (base-nova) — the out-of-the-box shadcn look. Restyling
+  #                    later is a one-file edit of the globals.css tokens, per the
+  #                    skill's bar.
+  if ! npx shadcn@latest init --yes --defaults; then
     echo "ERROR: 'npx shadcn@latest init' failed. Check network access to the shadcn" >&2
     echo "       registry and that src/app/globals.css imports tailwindcss." >&2
     exit 2
