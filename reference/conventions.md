@@ -162,6 +162,14 @@ pages, read the relevant guide under `node_modules/next/dist/docs/`:
   `@modal` slot to the group layout with a null `default.tsx` and a null catch-all page,
   and intercept with `@modal/(.)<path>/page.tsx` rendering the SAME form component inside
   a client dialog shell that closes via `router.back()` (parallel-routes.md, Modals).
+  Loading states for intercepted modals need two defences, because the router applies the
+  LAYOUT-level loading boundary to the slot on unprefetched re-entry (e.g. reopening after
+  `router.back()`), bypassing every slot/segment loading file: (a) the intercepted page is
+  SYNCHRONOUS — it returns the dialog shell immediately and suspends only inside it (async
+  content behind an in-dialog `<Suspense>` whose fallback mirrors the form); (b) the layout
+  wraps the slot in a container that hides children lacking `data-modal-chrome`
+  (`[&>*:not([data-modal-chrome])]:hidden`) — the real dialog escapes via portal, slot
+  skeletons carry the attribute, so only the leaked page-shaped fallback is suppressed.
   Consequential, multi-step, or externally-entered flows (checkout, login, set-password,
   cancellation) stay full pages. Never fork the copy or the form between the page and the
   dialog — share one component so the two renderings cannot drift.
