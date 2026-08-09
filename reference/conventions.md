@@ -1,6 +1,6 @@
 # Conventions — ui-mock
 
-This file doubles as the reflection-loop checklist: reviewers score every rule id below against
+This file doubles as the review-loop checklist: reviewers score every rule id below against
 the group's files and cite ids (BPnn/APnn) in findings. Items tagged `[scan]` are mechanical
 grep-shaped rules covered by `scripts/verify_pages.sh` — reviewers skip them and spend judgment
 on the rest.

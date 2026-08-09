@@ -5,21 +5,16 @@ description: Build the whole app's screens in apps/web as mock pages — route i
 
 # ui-mock — orchestrator
 
-A mock of every screen, built once, before the slices. It sits after `db-design` and before
-`feature`: the PRD says what the product must do, the data model says what may be true, and
-this makes both visible as pages a person can click. The pages survive; `src/lib/mock-data.ts`
-does not — each vertical slice replaces one accessor with a `graphqlFetch` call, and the
-component above it never learns which it got.
+Runs after `db-design`, before `feature`: builds every screen the PRD and data model imply,
+using typed mock data instead of GraphQL. Pages survive; `src/lib/mock-data.ts` does not — each
+vertical slice replaces one accessor with a `graphqlFetch` call, and the component above it
+never learns which it got.
 
-**Why the mock is worth its own step.** A screen is where an unanswered question stops being
-abstract: a form has to name every field, an empty list has to say what empty means, and a
-price has to render in some currency. Finding those inside a slice means finding them with the
-schema and the resolver already written. The skill's job is therefore as much to surface gaps
-as to produce pages — anything the PRD is silent on gets **flagged, never invented** (BP52).
+Anything the PRD is silent on gets flagged in the report, never invented (BP52).
 
-**What it does not do.** It writes no SDL, no resolvers, no schema, and no GraphQL operations.
-It does not commit — the `feature` skill commits a slice, and a mock is not a slice. It does not
-touch `apps/graphql`, `packages/db`, or `apps/web/src/generated/**`.
+**Out of scope.** No SDL, resolvers, schema, or GraphQL operations. No edits under
+`apps/graphql`, `packages/db`, or `apps/web/src/generated/**`. No commits — `feature` owns the
+gates and commit for each slice; a mock is not a slice.
 
 ## Context discipline
 
@@ -33,7 +28,7 @@ Reference files (read by subagents, not by this turn):
 - `.claude/skills/ui-mock/reference/pages.md` — how the route inventory is derived and what it
   must contain: group structure, shared files, what is off-limits, the component add-list.
 - `.claude/skills/ui-mock/reference/conventions.md` — design findings 1–5, BP1–BP60, AP1–AP32.
-  Doubles as the reflection-loop checklist.
+  Doubles as the review-loop checklist.
 
 Project skills every subagent that writes UI must read: **`code-ui`** (how UI is written here —
 the four states, messages, accessibility, layout that does not shift) and **`web`** (where files
@@ -56,13 +51,13 @@ Dispatch one subagent:
   name; currency, price display and tax rule; timezone/locale; the audiences the product has;
   per-entity column lists for every capture form and displayed record (from the data model,
   nullability pairings included); state machines and who may move what; visibility rules; and
-  the PRD's not-in-scope list verbatim. Anything the PRD leaves open is listed under an
-  explicit **Gaps** heading rather than resolved.
+  the PRD's not-in-scope list verbatim. Anything the PRD leaves open goes under an explicit
+  **Gaps** heading rather than getting resolved.
 - Return: the file path, its line count, the headline facts (brand, currency, timezone), and
   the gap count — at most 8 lines.
 
-If there is no PRD, stop and say so: this skill mocks a specified product, and inventing the
-specification is `brief-to-prd`'s job, not a side effect of drawing screens.
+If there is no PRD, stop and say so — this skill mocks a specified product; inventing the
+specification belongs to `brief-to-prd`.
 
 ## Phase 1 — Route inventory (subagent, then a checkpoint)
 
@@ -80,21 +75,21 @@ Dispatch one subagent:
 - Return: group names with route counts, the collision rulings, and any registry name added
   beyond the default list — at most 15 lines.
 
-**Then stop and show the user the route list** — one line per route, grouped — together with
-the collisions and Phase 0's gaps. The inventory is the one decision that is expensive to
-discover wrong after twenty pages exist. Build only once it is confirmed.
+**Stop and show the user the route list** — one line per route, grouped — with the collisions
+and Phase 0's gaps. Get confirmation before building; the inventory is expensive to change once
+pages exist on top of it.
 
 ## Phase 2 — Toolkit setup (script)
 
 Run `bash .claude/skills/ui-mock/scripts/setup_shadcn.sh`. It verifies the app is already a
-shadcn project on Tailwind 4 (Slice 6 made it one — this script never runs `init`, because
-init would rewrite `globals.css` and undo the token split), adds every component in
-`components.txt` whose file is missing, installs `server-only` if absent, reformats the
-generated files, and checks that `shadcn add` did not append a token block to `globals.css`.
+shadcn project on Tailwind 4 (never runs `init`, which would rewrite `globals.css` and undo the
+token split), adds every component in `components.txt` whose file is missing, installs
+`server-only` if absent, reformats the generated files, and checks that `shadcn add` did not
+append a token block to `globals.css`.
 
-On a non-zero exit, stop and report the script's ERROR line. The token-block failure in
-particular has a fixed remedy, stated in the error: keep the `@theme inline` mapping line in
-`globals.css`, move the values down into `src/styles/theme.css` — both schemes — and re-run.
+On a non-zero exit, stop and report the script's ERROR line. For the token-block failure: keep
+the `@theme inline` mapping line in `globals.css`, move the values down into
+`src/styles/theme.css` (both schemes), and re-run.
 
 ## Phase 3 — Mock data (subagent)
 
@@ -123,12 +118,12 @@ message**. Each dispatch:
   inventory says so — plus feature components under `apps/web/src/components/<area>/`.
   Structure from the inventory; every domain fact from facts.md and the source docs (BP52).
 - The agent owning the group that claims `/` also executes that route's collision ruling and
-  appends the reasoned line to `scripts/docs-check.ignore` (BP58). Two pages resolving to `/`
+  appends the reasoned line to `scripts/docs-check.ignore` (BP58) — two pages resolving to `/`
   is a build error, and a silently deleted doc-owned file is drift.
 - Return: files written with line counts — at most 12 lines, grouping related files onto one
   line if needed.
 
-## Phase 5 — Reflection loop (per group; all-must-pass; cap 2 rounds)
+## Phase 5 — Review loop (per group; all-must-pass; cap 2 rounds)
 
 For round R = 1, then R = 2, over the groups not yet passed:
 
@@ -161,10 +156,9 @@ After round 2, stop looping and carry unresolved rule ids + files into Phase 7.
 ## Phase 6 — Mechanical verification (script)
 
 Run `bash .claude/skills/ui-mock/scripts/verify_pages.sh`. It prints one PASS/FAIL line per
-check and writes full output to `.cache/ui-mock/verify-last.log`. It runs the repo-root gate —
-`pnpm lint && pnpm typecheck && pnpm test` — because that is the only tally that answers "is the
-workspace green", plus `pnpm docs:check`, the web build, the route-file inventory, and the
-mechanical anti-pattern scan.
+check and writes full output to `.cache/ui-mock/verify-last.log`: the repo-root gate
+(`pnpm lint && pnpm typecheck && pnpm test`), `pnpm docs:check`, the web build, the route-file
+inventory, and the mechanical anti-pattern scan.
 
 On a non-zero exit: dispatch one fixer per file or area the FAIL lines name — inputs =
 `.cache/ui-mock/verify-last.log` plus that path, return ≤ 3 lines — then rerun the script once.
@@ -173,9 +167,9 @@ One repair round only; remaining FAIL lines go into Phase 7.
 ## Phase 7 — Report
 
 At most 20 lines: routes built per group, review rounds used and any unresolved rule ids,
-verify verdict, the spec gaps Phase 0 and the fidelity reviewers surfaced (these are questions
-for the user, and the most valuable thing the run produces), and the restyle note — every token
-value is in `src/styles/theme.css`, so a re-theme is a one-file edit with no page recode.
+verify verdict, the spec gaps Phase 0 and the fidelity reviewers surfaced (questions for the
+user — the most valuable output of the run), and the restyle note: every token value is in
+`src/styles/theme.css`, so a re-theme is a one-file edit with no page recode.
 
 **Do not commit.** Hand back a working tree. The screens become real one vertical slice at a
 time, and the `feature` skill owns the gates and the commit for each.

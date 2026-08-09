@@ -92,7 +92,7 @@ run_check "build (turbo build --filter @nanostore/web)" pnpm turbo run build --f
 
 # --- Check 9: mechanical AI-anti-pattern scan (the [scan]-tagged AP rules). Availability is
 # probed first: the tool is a third-party package that may be unpublished or unreachable
-# offline, and its absence must not hard-fail the run — the reflection loop still reviews the
+# offline, and its absence must not hard-fail the run — the review loop still reviews the
 # judgment-shaped rules. The palette scan that used to live here is gone on purpose: BP42 is
 # a lint rule in apps/web/eslint.config.mjs, and check 5 already runs it.
 if npx --yes impeccable --help >>"$LOG" 2>&1; then
