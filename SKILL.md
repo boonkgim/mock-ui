@@ -41,7 +41,7 @@ live, the theme contract, the vendored shadcn checkout). Where they and this ski
 disagree, **they win** — they are the repo's law, with lint rules and tests behind them.
 
 Source of truth for every domain fact: the newest dated folder under `docs/` — its
-`NN-prd.html` and, if it exists, `NN-data-model.html`. Never `docs/2026-08-08-setup`; that is
+`NN-prd.md` and, if it exists, `NN-data-model.md`. Never `docs/2026-08-08-setup`; that is
 the scaffold's plan of record, and `pnpm docs:check` compares it against the working tree.
 
 Run artifacts live in `.cache/ui-mock/` (gitignored).
