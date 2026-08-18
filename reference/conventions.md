@@ -16,7 +16,7 @@ behind it, and this file does not.
 
 - Next.js 16 docs to consult
 - Design findings (1–5)
-- Best practices — DO / DON'T (BP1–BP60)
+- Best practices — DO / DON'T (BP1–BP68)
 - AI UI anti-patterns to avoid (AP1–AP32)
 
 ## Next.js 16 docs to consult
@@ -231,6 +231,58 @@ guide under `apps/web/node_modules/next/dist/docs/`:
 - BP59. `Button` is Base UI, so composition is `render={<Link … />}`, **not** `asChild`, and
   rendering anything that is not a `<button>` needs `nativeButton={false}` alongside it — without
   it the primitive warns that it applied native button semantics to an element that has none.
+
+### The shell, the breakpoints, and the mock's own furniture
+
+The mock owes the final layout minus design and minus the backend. These eight rules are what
+that sentence costs: every one of them names a structural decision that is cheap to make once,
+here, and expensive to discover missing three slices later.
+
+- BP61. **One shell module, and it owns the page heading.** The container, the area header, the
+  nav, the footer, the page heading, the section heading and the empty state live once, under
+  `src/components/shell/`, and every group layout and page composes them. A group layout adds its
+  own nav items and its own guard and nothing else. `<h1>` appears in exactly ONE component —
+  the page heading — and every screen, including `not-found` and `error`, renders it. Two areas
+  that each hand-roll a header do not look different on purpose; they look different because
+  nobody compared them, and by the time anyone does, thirty pages depend on both.
+- BP62. **Every screen decides its phone layout.** The shell contract fixes the behaviour of each
+  pattern — card grid, data table, definition list, form, header, dialog — and each screen
+  applies it. A file that lays out columns or renders a table and carries no breakpoint at all
+  has not decided; it has inherited whatever the desktop markup does when squeezed, which for a
+  wide table is a sideways scroll nobody chose. Deciding is cheap here and expensive later,
+  because the slice that replaces the data has no mandate to redesign the screen.
+- BP63. **The design seam is used uniformly or not at all.** Whatever hook the app leaves for the
+  design pass — a heading-font token, a tracking scale, a surface variant — is either on every
+  screen of every group or on none. A seam wired in two areas out of three is worse than no seam:
+  it does nothing today, so nothing catches it, and it silently omits an area on the day the
+  design pass finally gives it a value.
+- BP64. **The mock's annotations are one component behind one flag.** Open questions shown on
+  screen (BP52) are real value — a form that cannot be filled in is the point — but they are
+  furniture that ships out, so they render through ONE component in ONE mock-only directory,
+  gated by ONE flag. Never a second copy per area. With the flag off the screen must be the
+  layout that will ship; deleting the annotations at the end must be deleting a directory and
+  fixing imports, never editing thirty pages by hand.
+- BP65. **Scaffold demo UI is removed, not parked.** In greenfield mode, whatever the scaffold
+  shipped to prove its own wiring — a diagnostics panel, a "test item" link, a sample page — is
+  deleted rather than moved into the product's header, footer or sidebar. What is genuinely real
+  is re-homed into the product screen that owns that job (pages.md, disposition rulings). A
+  doc-owned file carries its reasoned `docs-check.ignore` line with it (BP58). In extension mode
+  this rule is inert: there is no scaffold UI left to rule on, and the existing product shell is
+  law.
+- BP66. **A route another skill owns keeps its surface and still gets its page.** The embedded
+  widget, the callback handler and the secret exchange are not rewritten and not re-mocked. The
+  page around them is: the summary of what is being committed to, the totals, whatever identity
+  the flow captures, the terms at the point of commitment, the shell, and the screen the flow
+  returns to. The owned route also sits inside a group's shell like every other screen, so a
+  visitor mid-flow does not lose the site's header and nav.
+- BP67. **Root fallbacks exist.** `src/app/not-found.tsx` and `src/app/global-error.tsx` are
+  written and render inside the shell. An unknown URL and a layout-level crash are two real
+  screens of the product, and they are the two nobody navigates to on purpose.
+- BP68. **A dialog that owns a mutation survives a refresh, or it is a page.** BP51's URL-driven
+  pattern is the way to make a short, non-destructive action a dialog. A client-state-only dialog
+  is acceptable ONLY for a confirmation of a single action whose context is fully on the page
+  behind it, and it must restate what it is confirming. Anything with fields, steps, or a state
+  the user would be upset to retype is a page.
 
 ### Theming / design tokens
 

@@ -1,6 +1,6 @@
 ---
 name: mock-ui
-description: Build the whole app's screens in apps/web as mock pages — route inventory derived from the PRD, typed mock data behind async accessors, every route in its group — then review each group and verify mechanically. Use when the user says "mock ui", "ui mock", "mock pages", "mock up the screens", "scaffold the UI", or "build the pages". It writes no GraphQL and never commits; the vertical slices replace its mock data layer by layer.
+description: Build the whole app's screens in apps/web as mock pages — route inventory and a shell contract derived from the PRD, typed mock data behind async accessors, one shared shell, then every route in its group — then review each group and verify mechanically. Use when the user says "mock ui", "ui mock", "mock pages", "mock up the screens", "scaffold the UI", or "build the pages". It writes no GraphQL and never commits; the vertical slices replace its mock data layer by layer.
 ---
 
 # mock-ui — orchestrator
@@ -10,11 +10,43 @@ using typed mock data instead of GraphQL. Pages survive; `src/lib/mock-data.ts` 
 vertical slice replaces one accessor with a `graphqlFetch` call, and the component above it
 never learns which it got.
 
-Anything the PRD is silent on gets flagged in the report, never invented (BP52).
+**What the mock owes: the final layout, minus design and minus the backend.** Every structural
+decision the real app will ship — the shell, the route tree, what is on each screen, where it
+sits, how it reflows on a phone, which of the four states it can be in — is made here, once, and
+the vertical slices only swap the data behind it. What is deliberately *not* made here is visual
+design (colour, type scale, spacing rhythm, imagery: tokens, and a later pass owns them) and the
+API. A screen the mock skips, or a breakpoint it never decides, is a layout decision handed to
+whoever writes the slice — which is the failure this skill exists to prevent.
+
+Anything the PRD is silent on gets flagged in the report and, where it changes a screen, shown
+on that screen through the run's one spec-note component (BP64) — never invented (BP52).
 
 **Out of scope.** No SDL, resolvers, schema, or GraphQL operations. No edits under
 `apps/graphql`, `packages/db`, or `apps/web/src/generated/**`. No commits — `feature` owns the
 gates and commit for each slice; a mock is not a slice.
+
+## Two modes, decided in Phase 0
+
+The same skill runs on a bare scaffold and on a live app, and almost everything below is shared.
+What differs is who owns the shell:
+
+- **greenfield** — the app has no product UI yet, only whatever demo or diagnostic UI the
+  scaffold shipped to prove its wiring. This run authors the shell contract, and **the scaffold's
+  demo UI is removed rather than parked inside the product's shell** (BP65). What the scaffold
+  proved that is genuinely real — a working auth panel, a real payment form, a live health
+  query — is kept where it is real and re-homed into a product screen; what only ever existed to
+  demonstrate the stack is deleted, and its removal is recorded wherever the plan of record
+  claims the file (BP58).
+- **extension** — the app already has product screens and a shell. This run adds the routes one
+  new feature needs and **conforms to the shell that exists**: it re-derives the contract by
+  reading the app rather than authoring one, adds no second header, nav, page-heading or
+  empty-state component, and changes a shared component only where the new feature genuinely
+  needs it — in which case every existing consumer is updated in the same run. An extension run
+  that introduces a second way to do something the app already does has made the app worse, not
+  bigger.
+
+Mode is a fact about the working tree, not about the PRD: if `src/app` already contains route
+groups with their own layouts and pages that are not the scaffold's, the run is an extension.
 
 ## Context discipline
 
@@ -25,9 +57,10 @@ lines total. Never read the review files — route on returned rule ids and file
 
 Reference files (read by subagents, not by this turn):
 
-- `.claude/skills/mock-ui/reference/pages.md` — how the route inventory is derived and what it
-  must contain: group structure, shared files, what is off-limits, the component add-list.
-- `.claude/skills/mock-ui/reference/conventions.md` — design findings 1–5, BP1–BP60, AP1–AP32.
+- `.claude/skills/mock-ui/reference/pages.md` — how the route inventory and the shell contract
+  are derived and what they must contain: group structure, shared files, mode rulings, what is
+  off-limits, the component add-list.
+- `.claude/skills/mock-ui/reference/conventions.md` — design findings 1–5, BP1–BP68, AP1–AP32.
   Doubles as the review-loop checklist.
 
 Project skills every subagent that writes UI must read: **`code-ui`** (how UI is written here —
@@ -45,39 +78,47 @@ Run artifacts live in `.cache/mock-ui/` (gitignored).
 
 Dispatch one subagent:
 
-- Inputs (paths): the newest `docs/<date>-*/` PRD and data-model files, and
-  `.claude/skills/mock-ui/reference/pages.md` (Domain & brand section).
-- Task: write `.cache/mock-ui/facts.md` — the fact sheet later agents build from: brand/site
-  name; currency, price display and tax rule; timezone/locale; the audiences the product has;
-  per-entity column lists for every capture form and displayed record (from the data model,
-  nullability pairings included); state machines and who may move what; visibility rules; and
-  the PRD's not-in-scope list verbatim. Anything the PRD leaves open goes under an explicit
-  **Gaps** heading rather than getting resolved.
-- Return: the file path, its line count, the headline facts (brand, currency, timezone), and
-  the gap count — at most 8 lines.
+- Inputs (paths): the newest `docs/<date>-*/` PRD and data-model files,
+  `.claude/skills/mock-ui/reference/pages.md` (Domain & brand section), and the current
+  `apps/web/src/app/` and `apps/web/src/components/` trees.
+- Task: write `.cache/mock-ui/facts.md` — the fact sheet later agents build from: the run's
+  **Mode** (greenfield or extension) with the evidence for it; brand/site name; currency, price
+  display and tax rule; timezone/locale; the audiences the product has; per-entity column lists
+  for every capture form and displayed record (from the data model, nullability pairings
+  included); state machines and who may move what; visibility rules; and the PRD's not-in-scope
+  list verbatim. Anything the PRD leaves open goes under an explicit **Gaps** heading rather than
+  getting resolved.
+- Return: the file path, its line count, the mode, the headline facts (brand, currency,
+  timezone), and the gap count — at most 8 lines.
 
 If there is no PRD, stop and say so — this skill mocks a specified product; inventing the
 specification belongs to `brief-to-prd`.
 
-## Phase 1 — Route inventory (subagent, then a checkpoint)
+## Phase 1 — Inventory and shell contract (subagent, then a checkpoint)
 
 Dispatch one subagent:
 
 - Inputs (paths): `.cache/mock-ui/facts.md`, the PRD and data model,
-  `.claude/skills/mock-ui/reference/pages.md`, and the current `apps/web/src/app/` tree.
-- Task: derive this run's inventory and write three files:
+  `.claude/skills/mock-ui/reference/pages.md`, and the current `apps/web/src/app/` and
+  `apps/web/src/components/` trees.
+- Task: derive this run's inventory and write four files:
   - `.cache/mock-ui/pages.md` — the route table per group, in the format pages.md specifies,
-    plus each group's extras and the collision ruling for every route that already exists.
+    plus each group's extras and the disposition ruling for every route and component that
+    already exists (keep / re-home / delete / conform).
+  - `.cache/mock-ui/shell.md` — the shell contract, in the format pages.md specifies. In
+    greenfield mode it is authored from the audiences; in extension mode it is **read off the
+    existing app** and cites the files it was read from.
   - `.cache/mock-ui/routes.txt` — one repo-relative page file path per line (verification reads
     this, so it is the inventory's machine half and must not drift from the table).
   - `.cache/mock-ui/components.txt` — the shadcn registry names the inventory needs, one per
     line, starting from pages.md's default list.
-- Return: group names with route counts, the collision rulings, and any registry name added
-  beyond the default list — at most 15 lines.
+- Return: the mode, group names with route counts, the shell contract's headline decisions
+  (container, nav pattern, heading ramp, breakpoint ramp), the disposition rulings, and any
+  registry name added beyond the default list — at most 20 lines.
 
-**Stop and show the user the route list** — one line per route, grouped — with the collisions
-and Phase 0's gaps. Get confirmation before building; the inventory is expensive to change once
-pages exist on top of it.
+**Stop and show the user the route list** — one line per route, grouped — with the shell
+contract's headline decisions, the disposition rulings and Phase 0's gaps. Get confirmation
+before building; both artifacts are expensive to change once pages exist on top of them.
 
 ## Phase 2 — Toolkit setup (script)
 
@@ -103,40 +144,70 @@ Dispatch one subagent:
   functions only, edge-state records so every UI state in the inventory is demonstrable).
   Interfaces mirror the data model's columns; **never import `@nanostore/db`** — web reaches
   data through the API, and the accessor's future is a `graphqlFetch` call, not a query.
+  In extension mode, extend the existing modules rather than rewriting them.
 - Return: each file with its line count — at most 6 lines.
 
-## Phase 4 — One agent per group (single message)
+## Phase 4 — The shell (one subagent, before any group)
 
-After Phase 3 returns, dispatch one subagent per group from the inventory, **all in one
+Every group builds on this, so it is built once and first. Dispatching the groups in parallel
+without it is what produces three headers that disagree — the divergence is invisible in each
+group's own review and obvious only across them.
+
+Dispatch one subagent:
+
+- Inputs (paths): `.cache/mock-ui/shell.md`, `.cache/mock-ui/pages.md`, `.cache/mock-ui/facts.md`,
+  `.claude/skills/mock-ui/reference/conventions.md`, and the `code-ui` and `web` skills.
+- Task: build exactly what the contract names (BP61) —
+  the shell module under `apps/web/src/components/shell/`: the container, the area header, the
+  nav pattern, the footer if the contract has one, the page heading (the app's **only** `<h1>`),
+  the section heading, and the shared empty state; the run's one spec-note module and its flag
+  (BP64); the root `not-found.tsx` and `global-error.tsx` (BP67). In **greenfield** mode it also
+  removes the scaffold's demo UI and re-homes whatever of it is real (BP65), appending the
+  reasoned line to `scripts/docs-check.ignore` for every doc-owned file it touches (BP58). In
+  **extension** mode it writes nothing new if the app already has these — it returns the paths
+  the group agents must import instead.
+- Return: the module's files with line counts, and the import list group agents are to use — at
+  most 12 lines.
+
+## Phase 5 — One agent per group (single message)
+
+After Phase 4 returns, dispatch one subagent per group from the inventory, **all in one
 message**. Each dispatch:
 
-- Inputs (paths): `.cache/mock-ui/pages.md` (its group's section), `.cache/mock-ui/facts.md`,
-  `.claude/skills/mock-ui/reference/conventions.md`, the `code-ui` and `web` skills,
-  `apps/web/src/lib/types.ts`, `apps/web/src/lib/mock-data.ts`, and the PRD + data model.
+- Inputs (paths): `.cache/mock-ui/pages.md` (its group's section), `.cache/mock-ui/shell.md`,
+  `.cache/mock-ui/facts.md`, `.claude/skills/mock-ui/reference/conventions.md`, the `code-ui`
+  and `web` skills, Phase 4's import list, `apps/web/src/lib/types.ts`,
+  `apps/web/src/lib/mock-data.ts`, and the PRD + data model.
 - Task: build every route of its group under `apps/web/src/app/(<group>)/` — page.tsx, the
   group's layout.tsx / loading.tsx / error.tsx, not-found.tsx and actions.ts where the
-  inventory says so — plus feature components under `apps/web/src/components/<area>/`.
-  Structure from the inventory; every domain fact from facts.md and the source docs (BP52).
-- The agent owning the group that claims `/` also executes that route's collision ruling and
+  inventory says so — plus feature components under `apps/web/src/components/<area>/`. The
+  group layout composes the shell module and adds only its own nav items and guard; it defines
+  no container, header markup, heading or empty state of its own (BP61). Structure from the
+  inventory and the contract; every domain fact from facts.md and the source docs (BP52); every
+  screen decides its phone layout (BP62).
+- The agent owning the group that claims `/` also executes that route's disposition ruling and
   appends the reasoned line to `scripts/docs-check.ignore` (BP58) — two pages resolving to `/`
   is a build error, and a silently deleted doc-owned file is drift.
 - Return: files written with line counts — at most 12 lines, grouping related files onto one
   line if needed.
 
-## Phase 5 — Review loop (per group; all-must-pass; cap 2 rounds)
+## Phase 6 — Review loop (per group; all-must-pass; cap 2 rounds)
 
 For round R = 1, then R = 2, over the groups not yet passed:
 
 1. **Reviewers** — two per remaining group, all dispatched in one message:
    - _Conventions reviewer_: inputs = `apps/web/src/app/(<group>)/`, the group's components,
-     `reference/conventions.md`, and the `code-ui` skill. Score every BP/AP id except those
-     tagged `[scan]` (the script checks those). Findings to
+     `.cache/mock-ui/shell.md`, `reference/conventions.md`, and the `code-ui` skill. Score every
+     BP/AP id except those tagged `[scan]` (the script checks those). Findings to
      `.cache/mock-ui/review-<group>-r<R>.md`, each citing rule id + file + line. Include an
      explicit BP54–BP56 pass, screen by screen: each descriptive slot is one short sentence,
      dense facts change UI pattern rather than sentence length, no fact is stated twice on one
      screen, the heading is still true in every state, and a height-changing dialog is anchored
-     rather than centred. Include a `code-ui` pass too: all four states present, every
-     conditional message's space reserved, no raw server error rendered.
+     rather than centred. Include a BP61–BP64 pass: every shared element comes from the shell
+     module, every screen's phone layout is a decision rather than a default, the design seam is
+     used uniformly, and every spec note goes through the one flagged component. Include a
+     `code-ui` pass too: all four states present, every conditional message's space reserved, no
+     raw server error rendered.
    - _Spec-fidelity reviewer_: inputs = the same directories, `.cache/mock-ui/facts.md`, and the
      PRD + data model. Diff the built UI against the spec in **both** directions — every
      required fact present, nothing unrequested invented — and treat a fact the spec never
@@ -151,25 +222,29 @@ For round R = 1, then R = 2, over the groups not yet passed:
    that file's findings; return = the path and new line count, at most 2 lines. A finding
    spanning files goes to one fixer owning exactly those files.
 
-After round 2, stop looping and carry unresolved rule ids + files into Phase 7.
+After round 2, stop looping and carry unresolved rule ids + files into Phase 8.
 
-## Phase 6 — Mechanical verification (script)
+## Phase 7 — Mechanical verification (script)
 
 Run `bash .claude/skills/mock-ui/scripts/verify_pages.sh`. It prints one PASS/FAIL line per
 check and writes full output to `.cache/mock-ui/verify-last.log`: the repo-root gate
 (`pnpm lint && pnpm typecheck && pnpm test`), `pnpm docs:check`, the web build, the route-file
-inventory, and the mechanical anti-pattern scan.
+inventory, the shell-conformance scan (one `<h1>` owner, one spec-note module, root error
+files), the breakpoint scan, and the mechanical anti-pattern scan.
 
 On a non-zero exit: dispatch one fixer per file or area the FAIL lines name — inputs =
 `.cache/mock-ui/verify-last.log` plus that path, return ≤ 3 lines — then rerun the script once.
-One repair round only; remaining FAIL lines go into Phase 7.
+One repair round only; remaining FAIL lines go into Phase 8.
 
-## Phase 7 — Report
+## Phase 8 — Report
 
-At most 20 lines: routes built per group, review rounds used and any unresolved rule ids,
-verify verdict, the spec gaps Phase 0 and the fidelity reviewers surfaced (questions for the
-user — the most valuable output of the run), and the restyle note: every token value is in
-`src/styles/theme.css`, so a re-theme is a one-file edit with no page recode.
+At most 20 lines: the mode, routes built per group, the shell contract's headline decisions,
+review rounds used and any unresolved rule ids, verify verdict, the spec gaps Phase 0 and the
+fidelity reviewers surfaced (questions for the user — the most valuable output of the run), and
+two notes on what stays cheap: every token value is in `src/styles/theme.css`, so a re-theme is
+a one-file edit with no page recode; and every spec note is behind one flag in one module, so
+seeing the layout as it will ship is flipping the flag, and deleting the annotations is deleting
+one directory.
 
 **Do not commit.** Hand back a working tree. The screens become real one vertical slice at a
 time, and the `feature` skill owns the gates and the commit for each.
