@@ -5,7 +5,7 @@ description: Build the whole app's screens in apps/web as mock pages — route i
 
 # ui-mock — orchestrator
 
-Runs after `db-design`, before `feature`: builds every screen the PRD and data model imply,
+Runs after `design-db`, before `feature`: builds every screen the PRD and data model imply,
 using typed mock data instead of GraphQL. Pages survive; `src/lib/mock-data.ts` does not — each
 vertical slice replaces one accessor with a `graphqlFetch` call, and the component above it
 never learns which it got.
