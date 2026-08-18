@@ -1,9 +1,9 @@
 ---
-name: ui-mock
-description: Build the whole app's screens in apps/web as mock pages — route inventory derived from the PRD, typed mock data behind async accessors, every route in its group — then review each group and verify mechanically. Use when the user says "ui mock", "mock pages", "mock up the screens", "scaffold the UI", or "build the pages". It writes no GraphQL and never commits; the vertical slices replace its mock data layer by layer.
+name: mock-ui
+description: Build the whole app's screens in apps/web as mock pages — route inventory derived from the PRD, typed mock data behind async accessors, every route in its group — then review each group and verify mechanically. Use when the user says "mock ui", "ui mock", "mock pages", "mock up the screens", "scaffold the UI", or "build the pages". It writes no GraphQL and never commits; the vertical slices replace its mock data layer by layer.
 ---
 
-# ui-mock — orchestrator
+# mock-ui — orchestrator
 
 Runs after `design-db`, before `feature`: builds every screen the PRD and data model imply,
 using typed mock data instead of GraphQL. Pages survive; `src/lib/mock-data.ts` does not — each
@@ -25,9 +25,9 @@ lines total. Never read the review files — route on returned rule ids and file
 
 Reference files (read by subagents, not by this turn):
 
-- `.claude/skills/ui-mock/reference/pages.md` — how the route inventory is derived and what it
+- `.claude/skills/mock-ui/reference/pages.md` — how the route inventory is derived and what it
   must contain: group structure, shared files, what is off-limits, the component add-list.
-- `.claude/skills/ui-mock/reference/conventions.md` — design findings 1–5, BP1–BP60, AP1–AP32.
+- `.claude/skills/mock-ui/reference/conventions.md` — design findings 1–5, BP1–BP60, AP1–AP32.
   Doubles as the review-loop checklist.
 
 Project skills every subagent that writes UI must read: **`code-ui`** (how UI is written here —
@@ -39,15 +39,15 @@ Source of truth for every domain fact: the newest dated folder under `docs/` —
 `NN-prd.md` and, if it exists, `NN-data-model.md`. Never `docs/2026-08-08-setup`; that is
 the scaffold's plan of record, and `pnpm docs:check` compares it against the working tree.
 
-Run artifacts live in `.cache/ui-mock/` (gitignored).
+Run artifacts live in `.cache/mock-ui/` (gitignored).
 
 ## Phase 0 — Ground truth (subagent)
 
 Dispatch one subagent:
 
 - Inputs (paths): the newest `docs/<date>-*/` PRD and data-model files, and
-  `.claude/skills/ui-mock/reference/pages.md` (Domain & brand section).
-- Task: write `.cache/ui-mock/facts.md` — the fact sheet later agents build from: brand/site
+  `.claude/skills/mock-ui/reference/pages.md` (Domain & brand section).
+- Task: write `.cache/mock-ui/facts.md` — the fact sheet later agents build from: brand/site
   name; currency, price display and tax rule; timezone/locale; the audiences the product has;
   per-entity column lists for every capture form and displayed record (from the data model,
   nullability pairings included); state machines and who may move what; visibility rules; and
@@ -63,14 +63,14 @@ specification belongs to `brief-to-prd`.
 
 Dispatch one subagent:
 
-- Inputs (paths): `.cache/ui-mock/facts.md`, the PRD and data model,
-  `.claude/skills/ui-mock/reference/pages.md`, and the current `apps/web/src/app/` tree.
+- Inputs (paths): `.cache/mock-ui/facts.md`, the PRD and data model,
+  `.claude/skills/mock-ui/reference/pages.md`, and the current `apps/web/src/app/` tree.
 - Task: derive this run's inventory and write three files:
-  - `.cache/ui-mock/pages.md` — the route table per group, in the format pages.md specifies,
+  - `.cache/mock-ui/pages.md` — the route table per group, in the format pages.md specifies,
     plus each group's extras and the collision ruling for every route that already exists.
-  - `.cache/ui-mock/routes.txt` — one repo-relative page file path per line (verification reads
+  - `.cache/mock-ui/routes.txt` — one repo-relative page file path per line (verification reads
     this, so it is the inventory's machine half and must not drift from the table).
-  - `.cache/ui-mock/components.txt` — the shadcn registry names the inventory needs, one per
+  - `.cache/mock-ui/components.txt` — the shadcn registry names the inventory needs, one per
     line, starting from pages.md's default list.
 - Return: group names with route counts, the collision rulings, and any registry name added
   beyond the default list — at most 15 lines.
@@ -81,7 +81,7 @@ pages exist on top of it.
 
 ## Phase 2 — Toolkit setup (script)
 
-Run `bash .claude/skills/ui-mock/scripts/setup_shadcn.sh`. It verifies the app is already a
+Run `bash .claude/skills/mock-ui/scripts/setup_shadcn.sh`. It verifies the app is already a
 shadcn project on Tailwind 4 (never runs `init`, which would rewrite `globals.css` and undo the
 token split), adds every component in `components.txt` whose file is missing, installs
 `server-only` if absent, reformats the generated files, and checks that `shadcn add` did not
@@ -95,8 +95,8 @@ the `@theme inline` mapping line in `globals.css`, move the values down into
 
 Dispatch one subagent:
 
-- Inputs (paths): `.cache/ui-mock/pages.md`, `.cache/ui-mock/facts.md`,
-  `.claude/skills/ui-mock/reference/conventions.md` (BP47–BP49, BP52, BP57 and design finding 5
+- Inputs (paths): `.cache/mock-ui/pages.md`, `.cache/mock-ui/facts.md`,
+  `.claude/skills/mock-ui/reference/conventions.md` (BP47–BP49, BP52, BP57 and design finding 5
   govern this phase), and the PRD + data model.
 - Task: write `apps/web/src/lib/types.ts` (the domain interfaces) and
   `apps/web/src/lib/mock-data.ts` (one module, first line `import "server-only"`, async accessor
@@ -110,8 +110,8 @@ Dispatch one subagent:
 After Phase 3 returns, dispatch one subagent per group from the inventory, **all in one
 message**. Each dispatch:
 
-- Inputs (paths): `.cache/ui-mock/pages.md` (its group's section), `.cache/ui-mock/facts.md`,
-  `.claude/skills/ui-mock/reference/conventions.md`, the `code-ui` and `web` skills,
+- Inputs (paths): `.cache/mock-ui/pages.md` (its group's section), `.cache/mock-ui/facts.md`,
+  `.claude/skills/mock-ui/reference/conventions.md`, the `code-ui` and `web` skills,
   `apps/web/src/lib/types.ts`, `apps/web/src/lib/mock-data.ts`, and the PRD + data model.
 - Task: build every route of its group under `apps/web/src/app/(<group>)/` — page.tsx, the
   group's layout.tsx / loading.tsx / error.tsx, not-found.tsx and actions.ts where the
@@ -131,17 +131,17 @@ For round R = 1, then R = 2, over the groups not yet passed:
    - _Conventions reviewer_: inputs = `apps/web/src/app/(<group>)/`, the group's components,
      `reference/conventions.md`, and the `code-ui` skill. Score every BP/AP id except those
      tagged `[scan]` (the script checks those). Findings to
-     `.cache/ui-mock/review-<group>-r<R>.md`, each citing rule id + file + line. Include an
+     `.cache/mock-ui/review-<group>-r<R>.md`, each citing rule id + file + line. Include an
      explicit BP54–BP56 pass, screen by screen: each descriptive slot is one short sentence,
      dense facts change UI pattern rather than sentence length, no fact is stated twice on one
      screen, the heading is still true in every state, and a height-changing dialog is anchored
      rather than centred. Include a `code-ui` pass too: all four states present, every
      conditional message's space reserved, no raw server error rendered.
-   - _Spec-fidelity reviewer_: inputs = the same directories, `.cache/ui-mock/facts.md`, and the
+   - _Spec-fidelity reviewer_: inputs = the same directories, `.cache/mock-ui/facts.md`, and the
      PRD + data model. Diff the built UI against the spec in **both** directions — every
      required fact present, nothing unrequested invented — and treat a fact the spec never
      stated as a gap to report, not a defect to fix. Findings to
-     `.cache/ui-mock/fidelity-<group>-r<R>.md`, citing BP52 + file + line + the passage.
+     `.cache/mock-ui/fidelity-<group>-r<R>.md`, citing BP52 + file + line + the passage.
    - Both return: PASS/FAIL, finding count, failing rule ids, and the files named — at most 15
      lines each. PASS with zero findings is a real verdict; do not manufacture findings.
 2. A group is done when both reviewers return PASS with zero findings. **All findings resolved**
@@ -155,13 +155,13 @@ After round 2, stop looping and carry unresolved rule ids + files into Phase 7.
 
 ## Phase 6 — Mechanical verification (script)
 
-Run `bash .claude/skills/ui-mock/scripts/verify_pages.sh`. It prints one PASS/FAIL line per
-check and writes full output to `.cache/ui-mock/verify-last.log`: the repo-root gate
+Run `bash .claude/skills/mock-ui/scripts/verify_pages.sh`. It prints one PASS/FAIL line per
+check and writes full output to `.cache/mock-ui/verify-last.log`: the repo-root gate
 (`pnpm lint && pnpm typecheck && pnpm test`), `pnpm docs:check`, the web build, the route-file
 inventory, and the mechanical anti-pattern scan.
 
 On a non-zero exit: dispatch one fixer per file or area the FAIL lines name — inputs =
-`.cache/ui-mock/verify-last.log` plus that path, return ≤ 3 lines — then rerun the script once.
+`.cache/mock-ui/verify-last.log` plus that path, return ≤ 3 lines — then rerun the script once.
 One repair round only; remaining FAIL lines go into Phase 7.
 
 ## Phase 7 — Report

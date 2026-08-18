@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
-# verify_pages.sh — mechanical verification for the ui-mock skill.
+# verify_pages.sh — mechanical verification for the mock-ui skill.
 # One PASS/FAIL line per check; full command output goes to the log so the orchestrator's
 # context stays small (fixer subagents read the log by path). Exits non-zero on any failure.
 set -uo pipefail
 # No 'set -e': every check must run so the report is complete; failures are counted instead.
 
-# Repo root: this script lives at .claude/skills/ui-mock/scripts/, four directories below it.
+# Repo root: this script lives at .claude/skills/mock-ui/scripts/, four directories below it.
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
 cd "$REPO_ROOT"
 
-LOG=".cache/ui-mock/verify-last.log"
-ROUTES=".cache/ui-mock/routes.txt"
-mkdir -p .cache/ui-mock
+LOG=".cache/mock-ui/verify-last.log"
+ROUTES=".cache/mock-ui/routes.txt"
+mkdir -p .cache/mock-ui
 : >"$LOG"
 
 FAILURES=0

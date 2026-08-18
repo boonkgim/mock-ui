@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# setup_shadcn.sh — idempotent toolkit setup for the ui-mock skill, for apps/web.
+# setup_shadcn.sh — idempotent toolkit setup for the mock-ui skill, for apps/web.
 #
 # This script never runs `shadcn init`. Slice 6 already initialized the app and then split
 # the result in two: token VALUES live in src/styles/theme.css, the `@theme inline` mapping
@@ -11,12 +11,12 @@
 # in wrappers under src/components/<area>/.
 set -euo pipefail
 
-# Repo root: this script lives at .claude/skills/ui-mock/scripts/, four directories below it.
+# Repo root: this script lives at .claude/skills/mock-ui/scripts/, four directories below it.
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
 cd "$REPO_ROOT"
 
 WEB="apps/web"
-INVENTORY=".cache/ui-mock/components.txt"
+INVENTORY=".cache/mock-ui/components.txt"
 
 # The default add-list, used when Phase 1 wrote no inventory. It MUST match the
 # "Component add-list" section of ../reference/pages.md.

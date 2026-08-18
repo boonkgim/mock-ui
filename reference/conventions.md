@@ -1,4 +1,4 @@
-# Conventions — ui-mock
+# Conventions — mock-ui
 
 This file doubles as the review-loop checklist: reviewers score every rule id below against
 the group's files and cite ids (BPnn/APnn) in findings. Items tagged `[scan]` are mechanical
@@ -183,7 +183,7 @@ guide under `apps/web/node_modules/next/dist/docs/`:
   (checkout, login, set-password, cancellation) stay full pages. Never fork the copy or the form
   between page and dialog.
 - BP52. **No invention.** Every domain noun, form field, price rule, status and copy fact traces
-  to the PRD, the data model, the run's inventory, or `.cache/ui-mock/facts.md`. Capture forms
+  to the PRD, the data model, the run's inventory, or `.cache/mock-ui/facts.md`. Capture forms
   mirror their entity's columns exactly — names, required/optional, nullability pairings — and a
   required column missing from a form and a field the spec never asked for are equally findings.
   Anything on the PRD's not-in-scope list must not appear. When the spec is silent on a fact the

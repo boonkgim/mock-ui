@@ -1,7 +1,7 @@
-# Route inventory — ui-mock
+# Route inventory — mock-ui
 
 This file does not list routes. It says how the run's inventory is **derived** from the PRD and
-written to `.cache/ui-mock/pages.md`, because nanostore is a scaffold: the product it ends up
+written to `.cache/mock-ui/pages.md`, because nanostore is a scaffold: the product it ends up
 holding is decided by whatever PRD is in the newest dated folder under `docs/`, and a route list
 checked in here would be a second, staler spec.
 
@@ -18,7 +18,7 @@ checked in here would be a second, staler spec.
 
 - Every domain fact — the business domain, currency and price display, timezone and locale,
   entity and field lists, delivery rules, scope — comes from the newest `docs/<date>-*/` PRD and
-  data model, distilled per run into `.cache/ui-mock/facts.md`. When they are silent, **flag the
+  data model, distilled per run into `.cache/mock-ui/facts.md`. When they are silent, **flag the
   gap** (BP52); never fill it from a plausible prior.
 - The brand/site name comes from the PRD. If the PRD has none, use `nanostore` — the name the
   root layout already carries — and list the missing name as a gap, rather than coining one.
@@ -30,7 +30,7 @@ checked in here would be a second, staler spec.
 
 ## What the inventory must contain
 
-`.cache/ui-mock/pages.md` holds one section per route group, and each section is a table:
+`.cache/mock-ui/pages.md` holds one section per route group, and each section is a table:
 
 | URL | Page file | Purpose | Key shadcn components | Mock data shown |
 
@@ -96,12 +96,12 @@ give the reason in one line.
 
 Phase 1 writes all three, and they must agree:
 
-- `.cache/ui-mock/pages.md` — the tables above, the extras, and the collision rulings.
-- `.cache/ui-mock/routes.txt` — one repo-relative page path per line, e.g.
+- `.cache/mock-ui/pages.md` — the tables above, the extras, and the collision rulings.
+- `.cache/mock-ui/routes.txt` — one repo-relative page path per line, e.g.
   `apps/web/src/app/(public)/page.tsx`. Blank lines and `#` comments are ignored.
   `verify_pages.sh` reads this file, so a route in the table and missing here is a route nothing
   checks.
-- `.cache/ui-mock/components.txt` — shadcn registry names, one per line, read by
+- `.cache/mock-ui/components.txt` — shadcn registry names, one per line, read by
   `setup_shadcn.sh`.
 
 ## Component add-list
