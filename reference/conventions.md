@@ -301,7 +301,12 @@ here, and expensive to discover missing three slices later.
   page around them is: the summary of what is being committed to, the totals, whatever identity
   the flow captures, the terms at the point of commitment, the shell, and the screen the flow
   returns to. The owned route also sits inside a group's shell like every other screen, so a
-  visitor mid-flow does not lose the site's header and nav.
+  visitor mid-flow does not lose the site's header and nav. **The wait for the widget is the
+  page's too**: the vendor's own loading UI cannot start until the vendor's script has, so the
+  gap between hydration and the widget appearing is a state this screen owes and `loading.tsx`
+  does not reach — see `code-ui`. A slot with no placeholder collapses to nothing and then
+  jumps, which on the screen that takes the money is the worst place in the product to have
+  skipped a state.
 - BP67. **Root fallbacks exist.** `src/app/not-found.tsx` and `src/app/global-error.tsx` are
   written and render inside the shell. An unknown URL and a layout-level crash are two real
   screens of the product, and they are the two nobody navigates to on purpose.
