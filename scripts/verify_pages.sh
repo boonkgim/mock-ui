@@ -261,6 +261,43 @@ if [ -n "$SHELL_FILES" ]; then
   fi
 fi
 
+# --- Check 18: BP76 — a route whose dynamic segment IS the credential. Both failures are
+# invisible on screen and survive any click-through review: a page that renders perfectly is
+# also perfectly indexable, and a token only leaks once someone else reads the log, the search
+# result or the third party's referer. The segment name is the signal — a directory called
+# `[accessToken]`/`[removalToken]` is a capability URL by construction, while `[bookingId]` is
+# a row id behind a session. Two obligations follow, and both are greppable.
+#
+# The outbound-link half leans on BP21: internal navigation is `<Link>`, so a raw `<a>` in one
+# of these files is by definition pointing at a host we do not control, and must send no
+# referer. `mailto:`/`tel:` carry no referer and are exempt.
+TOKEN_PAGES="$(find "$SRC/app" -type d -name '*[Tt]oken]' 2>/dev/null |
+  while IFS= read -r d; do find "$d" -name 'page.tsx'; done || true)"
+if [ -n "$TOKEN_PAGES" ]; then
+  echo "===== BP76 capability-URL routes: noindex + no referer =====" >>"$LOG"
+  BP76_FAIL=""
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    grep -q 'index: *false' "$f" || BP76_FAIL="$BP76_FAIL indexable:$f"
+    # Raw <a> tags must each carry `rel` with noreferrer, or be a mailto:/tel: (which sends
+    # none). Counted rather than grepped: the attribute is what suppresses the header, and a
+    # file that merely mentions the word — a comment explaining the rule, say — has not applied
+    # it. Matching `rel=` and not the bare word is the other half of the same point.
+    A_TAGS="$(grep -cE '<a([[:space:]]|$)' "$f" || true)"
+    SAFE="$(grep -cE 'rel=("[^"]*noreferrer|\{[^}]*noreferrer)' "$f" || true)"
+    INERT="$(grep -cE 'href=("|\{")(mailto|tel):' "$f" || true)"
+    if [ "${A_TAGS:-0}" -gt $((${SAFE:-0} + ${INERT:-0})) ]; then
+      BP76_FAIL="$BP76_FAIL leaks-referer:$f"
+    fi
+  done <<<"$TOKEN_PAGES"
+  if [ -n "$BP76_FAIL" ]; then
+    printf '%s\n' $BP76_FAIL >>"$LOG"
+    fail "BP76 capability URL exposes its token:$BP76_FAIL"
+  else
+    pass "BP76 every token-addressed route is unindexed and sends no referer"
+  fi
+fi
+
 echo "----------------------------------------"
 if [ "$FAILURES" -gt 0 ]; then
   echo "RESULT: $FAILURES check(s) failed. Full command output: $LOG"

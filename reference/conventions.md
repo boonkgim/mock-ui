@@ -16,7 +16,7 @@ behind it, and this file does not.
 
 - Next.js 16 docs to consult
 - Design findings (1–5)
-- Best practices — DO / DON'T (BP1–BP73)
+- Best practices — DO / DON'T (BP1–BP76)
 - AI UI anti-patterns to avoid (AP1–AP32)
 
 ## Next.js 16 docs to consult
@@ -114,6 +114,24 @@ guide under `apps/web/node_modules/next/dist/docs/`:
   `router.push` is only for a real programmatic redirect.
 - BP22. Every page exports `metadata` or `generateMetadata` with a distinct title; the root
   layout sets `title.template`; no manual `<head>`/`<title>` anywhere.
+
+- BP76. **A route whose URL segment is its own credential carries three rules nothing else
+  needs.** An emailed link addressed by an unguessable token rather than by an id — a
+  confirmation, a password reset, an unsubscribe, an invite, a shared document — is a capability
+  URL: the token in the path *is* the authorisation, because the person opening it has no session
+  at all. That is why it is in the URL, and it is also why (a) the page sets
+  `robots: { index: false, follow: false }`, since a crawler that reaches one would put the
+  credential in a search result; (b) every outbound link to a host you do not control carries
+  `rel="noreferrer"`, so the token never travels in a `Referer` — browsers default to
+  `strict-origin-when-cross-origin` and would send only the origin, but a credential must not
+  rest on a default the site does not set; and (c) its `not-found.tsx` (BP17) is phrased as a
+  dead or spent link, never as a missing record, because the visitor typed nothing and has no id
+  to have got wrong. Use a separate token column rather than the row id — not because ids are
+  guessable (a UUIDv7 still carries 62+ random bits, which no attacker brute-forces over a
+  network), but because an id is an *identifier* and a credential is a *capability*: ids are
+  printed in logs, admin screens, API responses and support tickets, so making one the
+  authorisation turns every place that legitimately shows it into a leak, and a primary key
+  cannot be rotated or expired when it does.
 
 ### Forms via server actions (07-mutating-data.md, and `code-ui`)
 
