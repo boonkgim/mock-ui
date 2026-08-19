@@ -203,11 +203,23 @@ guide under `apps/web/node_modules/next/dist/docs/`:
   (checkout, login, set-password, cancellation) stay full pages. Which routes get this treatment
   is decided in the inventory, not at build time (`pages.md`, page-or-dialog) — this rule is
   written as a constraint on a dialog, so it never fires for a run that only ever builds pages.
-  Three things the shape costs, each of which fails quietly:
+  Four things the shape costs, each of which fails quietly:
   - **`notFound()` is not available inside the slot.** It resolves to the boundary above and
     replaces the whole screen — including the page the dialog was meant to sit on top of. The
     intercepted route reports its own miss inline, as another branch of the dialog with its own
     `DialogTitle`; the canonical page beside it still answers the same URL with a real 404.
+  - **The slot keeps the dialog after the URL moves on.** `default.tsx` is the fallback for
+    HARD navigations only; on a soft one the router keeps an unmatched slot's last content. So
+    the moment the dialog's own body navigates FORWARD — a submit that redirects to the next
+    step — the dialog is left hanging over the page that replaced the one it was covering, and
+    the visitor has to dismiss a decision they already made to reach the screen they asked for.
+    The shell's `open` is therefore DERIVED, never held: the intercepted page passes the route
+    pattern it answers, and the dialog is open exactly while the live pathname still matches it.
+    Nothing captured on the client can stand in for that prop — the slot's subtree is re-created
+    during the navigation, so a mount-time `useState(pathname)` or ref comes back holding the
+    NEW url and every dialog stays open, from code that reads as though it closes them. Reading
+    the dialog's own file will not find this: nothing in it is wrong. The tell is a dialog whose
+    primary action leads somewhere else, and the check is to follow that action.
   - **The shell wrapper is `display: contents`.** The dialog is portalled to the body, so the
     slot contributes nothing to the flow — a wrapper that is a block leaves an empty row in the
     layout, under every page in the group, forever.

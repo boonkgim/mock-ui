@@ -235,6 +235,32 @@ else
   pass "BP23/BP27 every input is in a form and every credential field is autofillable"
 fi
 
+# --- Check 17: BP51 — a route-driven dialog derives its open state from the URL. The failure it
+# catches is the one the shape hides best: a slot the current URL no longer matches keeps its
+# last content on a soft navigation, so a dialog whose action navigates forward stays on screen
+# over the page that replaced the one behind it. Nothing in the dialog's own file looks wrong,
+# and no static review of it will say otherwise. The shell is found by the marker BP51 already
+# requires (`data-modal-chrome`), and it must read the live pathname and never hold its own
+# open state: `defaultOpen` on that shell IS the bug, spelled out.
+# The marker is matched as a JSX attribute, which is the shell; the layout's leak guard
+# mentions the same name inside a CSS selector (`[data-modal-chrome]`) and is not it.
+SHELL_FILES="$(grep -rlE '(^|[[:space:]])data-modal-chrome([[:space:]>=]|$)' \
+  --include='*.tsx' "$SRC" 2>/dev/null || true)"
+if [ -n "$SHELL_FILES" ]; then
+  echo "===== BP51 route-modal shell derives open from the pathname =====" >>"$LOG"
+  BP51_FAIL=""
+  while IFS= read -r f; do
+    grep -q 'usePathname' "$f" || BP51_FAIL="$BP51_FAIL open-not-derived:$f"
+    grep -q 'defaultOpen' "$f" && BP51_FAIL="$BP51_FAIL defaultOpen:$f"
+  done <<<"$SHELL_FILES"
+  if [ -n "$BP51_FAIL" ]; then
+    printf '%s\n' $BP51_FAIL >>"$LOG"
+    fail "BP51 route-modal shell holds its open state instead of deriving it:$BP51_FAIL"
+  else
+    pass "BP51 route-modal shell opens on the URL it stands for"
+  fi
+fi
+
 echo "----------------------------------------"
 if [ "$FAILURES" -gt 0 ]; then
   echo "RESULT: $FAILURES check(s) failed. Full command output: $LOG"
