@@ -235,23 +235,39 @@ For round R = 1, then R = 2, over the groups not yet passed:
      blind spot it exists to cover. Its question is not "is what is here correct" but "what does
      a shipped version of this screen not have". For every route: name the screen's genre in a
      few words (a sign-in, a checkout, a list with filters, a record detail, a destructive
-     confirm), then walk it as a user *in the source* — press Enter in the form, arrive already
+     confirm), then walk it as a user _in the source_ — press Enter in the form, arrive already
      signed in, arrive with the list empty, get it wrong twice, come back on a phone — and say
      what is missing. Bounds, or it becomes a slop generator: it may propose FURNITURE only
      (controls, states, affordances, destinations, ordinary copy — BP69's category), never a
      domain fact, status, price rule or noun (BP52); nothing on the not-in-scope list; and a
      rationale it finds in a comment is not evidence (BP73) — a file that argues its own
      exemption is the one to look at hardest. Findings to
-     `.cache/mock-ui/shape-<group>-r<R>.md`, one row per route so a screen cannot be skimmed,
-     each citing file + line + the genre the comparison was against.
+     `.cache/mock-ui/shape-<group>-r<R>.md`. **Every route gets its own row whether or not it
+     has findings** — that is what stops a screen being skimmed — but a defect shared by
+     several routes is stated ONCE as a pattern with the routes listed under it, never repeated
+     per route. One undecided thing (where a form lands after it saves) restated on five screens
+     reads as five problems, inflates the count, and sends five fixers at one decision. Each
+     finding cites file + line + the genre the comparison was against, and carries a severity so
+     the round can be triaged rather than swallowed whole.
    - All three return: PASS/FAIL, finding count, failing rule ids, and the files named — at most
      15 lines each. PASS with zero findings is a real verdict; do not manufacture findings.
 2. A group is done when all three reviewers return PASS with zero findings. **All findings
    resolved** — no partial credit.
-3. **Fixers** — per failing group, one fixer subagent per named file, dispatched in one message
-   per group. Inputs = whichever review file named it plus that single file path; task = apply
-   that file's findings; return = the path and new line count, at most 2 lines. A finding
-   spanning files goes to one fixer owning exactly those files.
+3. **Merge before dispatching.** Groups are reviewed independently, so two of them routinely
+   find the same defect in a file they share — the shell module, `src/lib/**`, the root layout.
+   Dispatching per group sends two fixers at one file in one round, and the second overwrites or
+   conflicts with the first. So: collect the round's findings across ALL groups first, merge the
+   ones naming the same file, and give every shared file exactly ONE fixer for the round,
+   carrying every group's findings for it. Groups are the unit of REVIEW, never the unit of
+   repair.
+4. **Fixers** — one fixer subagent per file in the merged list, dispatched in one message.
+   Inputs = the findings for that file (from whichever review files named it) plus that single
+   file path; task = apply them; return = the path and new line count, at most 2 lines. A finding
+   spanning files goes to one fixer owning exactly those files. A fresh-eyes finding names what
+   is MISSING, not how to build it: where the missing thing is a decision the mock owes rather
+   than behaviour the mock can have — where a form lands after saving, when the backend cannot
+   save — the fixer makes the decision and renders it, and does not try to wire up a mock
+   accessor to make it real.
 
    **One exception, and it is not a fixer's to make:** a fresh-eyes finding that needs a NEW
    ROUTE — a password reset, a sign-up screen, a confirmation step — is an inventory defect, and
