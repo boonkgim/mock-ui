@@ -154,17 +154,40 @@ done
 # per-area copy is how three of them appeared last time, and each one looked fine in its own
 # group's review.
 if [ -d "$MOCK_DIR" ]; then
-  ANNOTATION_DUPES="$(grep -rlE --include='*.tsx' 'function (GapNote|SpecNote|SpecNotes|SpecGap)' \
+  ANNOTATION_DUPES="$(grep -rlE --include='*.tsx' 'function (GapNote|SpecNote|SpecNotes|SpecGap|SpecAnchor|SpecInspector)' \
     "$SRC/app" "$SRC/components" 2>/dev/null | grep -v "^$MOCK_DIR/" || true)"
   if [ -n "$ANNOTATION_DUPES" ]; then
-    printf '===== BP64 spec-note components outside the mock module =====\n%s\n' \
+    printf '===== BP64 annotation components outside the mock module =====\n%s\n' \
       "$ANNOTATION_DUPES" >>"$LOG"
-    fail "BP64 spec-note component outside $MOCK_DIR: $(printf '%s' "$ANNOTATION_DUPES" | tr '\n' ' ')"
+    fail "BP64 annotation component outside $MOCK_DIR: $(printf '%s' "$ANNOTATION_DUPES" | tr '\n' ' ')"
   else
-    pass "BP64 one spec-note module ($MOCK_DIR)"
+    pass "BP64 one annotation module ($MOCK_DIR)"
   fi
 else
-  pass "BP64 no spec-note module (the run showed no gaps on screen)"
+  pass "BP64 no annotation module (the run found no gaps)"
+fi
+
+# --- Check 14b: BP70 — open questions never render as text on a screen. The failure this
+# catches is the mock becoming untestable: a page covered in editorial asides cannot be put in
+# front of a person, and every layout judgement they give is about a page that will never ship.
+# Two signals, both cheap: the annotation module must export an inspector that some layout
+# mounts, and no screen outside the module may print the words a note used to be introduced by.
+if [ -d "$MOCK_DIR" ]; then
+  echo "===== BP70 inspector mounted, no on-screen question text =====" >>"$LOG"
+  BP70_FAIL=""
+  grep -rqE 'function (SpecInspector|GapInspector|OpenQuestions)' "$MOCK_DIR" 2>/dev/null ||
+    BP70_FAIL="$BP70_FAIL no-inspector-in-$MOCK_DIR"
+  grep -rqE '<(SpecInspector|GapInspector|OpenQuestions)\b' --include='*.tsx' "$SRC/app" 2>/dev/null ||
+    BP70_FAIL="$BP70_FAIL inspector-never-mounted"
+  QUESTION_TEXT="$(grep -rlE --include='*.tsx' '>[[:space:]]*(Open question|Gap [0-9]+:|Question [0-9]+\.)' \
+    "$SRC/app" "$SRC/components" 2>/dev/null | grep -v "^$MOCK_DIR/" || true)"
+  [ -n "$QUESTION_TEXT" ] && BP70_FAIL="$BP70_FAIL $QUESTION_TEXT"
+  if [ -n "$BP70_FAIL" ]; then
+    printf '%s\n' $BP70_FAIL >>"$LOG"
+    fail "BP70 open questions on screen or no inspector:$BP70_FAIL"
+  else
+    pass "BP70 questions behind the inspector, none on screen"
+  fi
 fi
 
 # --- Check 15: BP62 — a screen that lays out columns or renders a table and carries no

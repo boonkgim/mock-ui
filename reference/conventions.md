@@ -16,7 +16,7 @@ behind it, and this file does not.
 
 - Next.js 16 docs to consult
 - Design findings (1–5)
-- Best practices — DO / DON'T (BP1–BP68)
+- Best practices — DO / DON'T (BP1–BP70)
 - AI UI anti-patterns to avoid (AP1–AP32)
 
 ## Next.js 16 docs to consult
@@ -256,12 +256,13 @@ here, and expensive to discover missing three slices later.
   screen of every group or on none. A seam wired in two areas out of three is worse than no seam:
   it does nothing today, so nothing catches it, and it silently omits an area on the day the
   design pass finally gives it a value.
-- BP64. **The mock's annotations are one component behind one flag.** Open questions shown on
-  screen (BP52) are real value — a form that cannot be filled in is the point — but they are
-  furniture that ships out, so they render through ONE component in ONE mock-only directory,
-  gated by ONE flag. Never a second copy per area. With the flag off the screen must be the
-  layout that will ship; deleting the annotations at the end must be deleting a directory and
-  fixing imports, never editing thirty pages by hand.
+- BP64. **The mock's annotations are one module behind one flag, and none of them are on the
+  screen.** Open questions are the run's most valuable output, so they are recorded against the
+  exact element they are about — but as an *attribute*, never as visible copy beside it (BP70).
+  ONE mock-only directory holds the anchor and the inspector that reads them, gated by ONE flag.
+  Never a second copy per area. With the flag off the screen must be the layout that will ship;
+  deleting the annotations at the end must be deleting a directory and fixing imports, never
+  editing thirty pages by hand.
 - BP65. **Scaffold demo UI is removed, not parked.** In greenfield mode, whatever the scaffold
   shipped to prove its own wiring — a diagnostics panel, a "test item" link, a sample page — is
   deleted rather than moved into the product's header, footer or sidebar. What is genuinely real
@@ -283,6 +284,31 @@ here, and expensive to discover missing three slices later.
   is acceptable ONLY for a confirmation of a single action whose context is fully on the page
   behind it, and it must restate what it is confirming. Anything with fields, steps, or a state
   the user would be upset to retype is a page.
+- BP69. **Build for production, then mock the copy — do not build to the spec's silences.** The
+  target is what a real, shipped version of this product would have, not the subset the PRD
+  happened to enumerate. A store that takes money has a footer, a way to reach a human, terms
+  the customer can re-read after checkout, and something to say about the data it collects; a
+  list has an empty state; an account has a way out. Nobody writes those into a PRD, and a mock
+  built only from what was written arrives missing exactly the parts the spec author took for
+  granted. So: ask what this kind of product needs, build it, and WRITE THE COPY — invented copy
+  marked as invented is reviewable and correctable, and a missing page is neither. BP52 still
+  holds and is not in tension with this: it forbids inventing *the domain* — a status, a price
+  rule, a field, a noun the business does not use — not inventing the ordinary furniture every
+  product of this kind has. Every invented line carries an anchor (BP70) so the reviewer sees
+  precisely what was made up, and the shell contract records which slots were judged not needed
+  and why, because "decided against" and "nobody thought of it" are indistinguishable otherwise.
+- BP70. **Open questions go in an inspector, never on the screen.** A mock exists to be put in
+  front of a person. Editorial asides about what the spec failed to decide destroy that: the
+  tester reads the asides instead of the screen, every judgement they give is about a page that
+  will never ship, and the reviewer cannot tell the layout from the commentary. So annotations
+  render as `data-` attributes on the element they concern, and ONE client component — mounted
+  once, above every area, styled like the framework's own dev indicator, in the corner opposite
+  it — lists them and highlights the element each one is about on hover. The question stays
+  written next to the markup it is about, which is the only place it stays true; only its
+  *presentation* moves. Where the question is that a screen cannot say anything at all, the
+  screen still says the most plausible production thing (BP69) and the anchor carries the doubt.
+  A screen with nothing undecided shows no control at all, so a visible count always means work.
+
 
 ### Theming / design tokens
 

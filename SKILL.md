@@ -18,8 +18,11 @@ design (colour, type scale, spacing rhythm, imagery: tokens, and a later pass ow
 API. A screen the mock skips, or a breakpoint it never decides, is a layout decision handed to
 whoever writes the slice — which is the failure this skill exists to prevent.
 
-Anything the PRD is silent on gets flagged in the report and, where it changes a screen, shown
-on that screen through the run's one spec-note component (BP64) — never invented (BP52).
+Screens are built to what a shipped product of this kind has, not to the subset the PRD happened
+to list, and the copy for it is written rather than left blank (BP69). Anything the PRD is silent
+on gets flagged in the report and anchored to the element it is about, where it surfaces in the
+run's one open-questions inspector — never as visible commentary on the screen (BP70), and never
+silently invented as domain fact (BP52).
 
 **Out of scope.** No SDL, resolvers, schema, or GraphQL operations. No edits under
 `apps/graphql`, `packages/db`, or `apps/web/src/generated/**`. No commits — `feature` owns the
@@ -160,7 +163,8 @@ Dispatch one subagent:
 - Task: build exactly what the contract names (BP61) —
   the shell module under `apps/web/src/components/shell/`: the container, the area header, the
   nav pattern, the footer if the contract has one, the page heading (the app's **only** `<h1>`),
-  the section heading, and the shared empty state; the run's one spec-note module and its flag
+  the section heading, the footer, and the shared empty state; the run's one annotation module
+  (anchor + inspector) and its flag
   (BP64); the root `not-found.tsx` and `global-error.tsx` (BP67). In **greenfield** mode it also
   removes the scaffold's demo UI and re-homes whatever of it is real (BP65), appending the
   reasoned line to `scripts/docs-check.ignore` for every doc-owned file it touches (BP58). In
@@ -205,7 +209,8 @@ For round R = 1, then R = 2, over the groups not yet passed:
      screen, the heading is still true in every state, and a height-changing dialog is anchored
      rather than centred. Include a BP61–BP64 pass: every shared element comes from the shell
      module, every screen's phone layout is a decision rather than a default, the design seam is
-     used uniformly, and every spec note goes through the one flagged component. Include a
+     used uniformly, and every open question is an anchor read by the one inspector with nothing
+     visible on the screen (BP70). Include a
      `code-ui` pass too: all four states present, every conditional message's space reserved, no
      raw server error rendered.
    - _Spec-fidelity reviewer_: inputs = the same directories, `.cache/mock-ui/facts.md`, and the
@@ -229,7 +234,7 @@ After round 2, stop looping and carry unresolved rule ids + files into Phase 8.
 Run `bash .claude/skills/mock-ui/scripts/verify_pages.sh`. It prints one PASS/FAIL line per
 check and writes full output to `.cache/mock-ui/verify-last.log`: the repo-root gate
 (`pnpm lint && pnpm typecheck && pnpm test`), `pnpm docs:check`, the web build, the route-file
-inventory, the shell-conformance scan (one `<h1>` owner, one spec-note module, root error
+inventory, the shell-conformance scan (one `<h1>` owner, one annotation module, root error
 files), the breakpoint scan, and the mechanical anti-pattern scan.
 
 On a non-zero exit: dispatch one fixer per file or area the FAIL lines name — inputs =
@@ -242,9 +247,9 @@ At most 20 lines: the mode, routes built per group, the shell contract's headlin
 review rounds used and any unresolved rule ids, verify verdict, the spec gaps Phase 0 and the
 fidelity reviewers surfaced (questions for the user — the most valuable output of the run), and
 two notes on what stays cheap: every token value is in `src/styles/theme.css`, so a re-theme is
-a one-file edit with no page recode; and every spec note is behind one flag in one module, so
-seeing the layout as it will ship is flipping the flag, and deleting the annotations is deleting
-one directory.
+a one-file edit with no page recode; and every open question is behind one flag in one module,
+so seeing the layout as it will ship is flipping the flag, and deleting the annotations is
+deleting one directory.
 
 **Do not commit.** Hand back a working tree. The screens become real one vertical slice at a
 time, and the `feature` skill owns the gates and the commit for each.

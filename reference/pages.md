@@ -84,8 +84,11 @@ The contract records, each in a line or two with the reason:
   viewport is narrow. Which parts are shared by every area and which are the area's own.
 - **Nav pattern.** One implementation, parameterised by its links: how the current page is
   marked (`aria-current="page"`), what element the links are, and where the nav goes on a phone.
-- **Footer.** Whether there is one and what is in it. "No footer, because the PRD specifies no
-  footer content" is a valid and preferable answer to inventing links.
+- **Footer.** There is one unless there is a strong reason there is not, and the contract states
+  what is in it — links, contact, fine print, copyright — with the copy written (BP69). "The PRD
+  specifies no footer content" is a reason to write the footer a product of this kind has and
+  anchor what was invented, NOT a reason to ship a site with no bottom edge and no way to reach
+  anyone. A staff-only area may legitimately carry a reduced one; say so and say why.
 - **Heading ramp.** The type treatment for the page heading, the section heading and the card
   title, as the classes to use — and the rule that the page heading exists in exactly one
   component, which every page renders (BP61). Whatever design seam the app already has (a
@@ -95,7 +98,12 @@ The contract records, each in a line or two with the reason:
   section that decides whether a wide table scrolls, drops columns, or restacks — once, so ten
   tables do not answer it ten ways (BP62).
 - **Shared state components.** The empty state, the skeleton vocabulary, the form-level alert
-  slot, and the spec-note component with its flag (BP64) — named, with their paths.
+  slot, and the annotation module — the anchor and the inspector that reads it — with its flag
+  (BP64, BP70), named, with their paths.
+- **Production slots the spec never mentioned.** The list of things this kind of product has
+  that the PRD did not ask for — a footer, a contact route, terms, a privacy page, a way to
+  leave — with, for each, whether it was built and where, or judged not needed and why (BP69).
+  This is the section a reviewer reads to find out what the spec forgot.
 
 In **extension** mode the contract is *read* rather than written: each line cites the file the
 existing app answers it from, and a line the app answers inconsistently is reported as a finding
