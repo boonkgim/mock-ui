@@ -213,7 +213,7 @@ guide under `apps/web/node_modules/next/dist/docs/`:
     layout, under every page in the group, forever.
   - **Never fork the copy or the form between page and dialog** — one component, one `surface`
     flag. Exactly two things may differ, and both are chrome the surface already owns: the
-    **panel** (a page draws a Card; a dialog *is* the card, and a second border inside it is a
+    **panel** (a page draws a Card; a dialog _is_ the card, and a second border inside it is a
     mistake) and the **exit** (a page must name destinations; a dialog closes, which restores
     whatever screen it was opened from). Fields, validation, messages, terms and the stateful
     heading are written once and read the same in both.
@@ -410,6 +410,31 @@ here, and expensive to discover missing three slices later.
   what it independently checked; and where the comment argues an omission, the omission is the
   finding until something other than the comment justifies it. The tell is a review note that
   paraphrases the source it reviewed.
+- BP74. **A route that is mostly its parent, re-rendered, has not earned a page.** Subtract from a
+  screen everything the screen that links to it already showed. If what is left is a couple of
+  facts and one control, the route is a side-step, and the page it has been given spends a
+  breadcrumb, a restated title, a restated subject and a section heading rebuilding a context the
+  visitor never left — plus a navigation, in the middle of whatever journey it sits in. Make it
+  BP51's `both`: the intercepted dialog for the warm entry, the page kept intact for the cold one
+  (a pasted link, a bookmark, a search result, a refresh, no JS), and the decision written once in
+  a component both surfaces render. Two things about this rule matter more than the rule:
+  - **Run the subtraction, do not estimate it.** List both screens' contents side by side. Every
+    such route feels like it says more than its parent, because it was written as though the
+    parent did not exist, and it is being read by whoever wrote it.
+  - **The routes it catches do not look like forms.** It fires on detail screens with one control
+    — a date with a seat count, an order with a quantity, a request with an approve button — and
+    those are exactly the ones a page-or-dialog rule scoped to "form routes" walks straight past.
+    The name of the route is not the test; what is left after the subtraction is.
+- BP75. **Never link to a screen whose only message is that there is nothing to do there.** A row
+  that cannot be acted on says why **in the row**, in the cell where its action would have been —
+  and says nothing where the row's own badge or status already said it (BP54). Sending the visitor
+  through a navigation to read one sentence is the worst version of BP74: it costs a page load,
+  loses their place in a list, and the sentence it delivers is often a fact the list already
+  carried. The tell is a not-bookable / not-editable / expired branch of a detail screen whose
+  whole body is one line of copy. Two things this exposes, and both are worth the finding on their
+  own: a status word that is doing two jobs (a thing that reads `Open` but takes no action needs
+  the row to say which), and a list whose rows are links by habit rather than because each row has
+  somewhere useful to go.
 
 ### Theming / design tokens
 

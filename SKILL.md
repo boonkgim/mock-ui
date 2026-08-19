@@ -192,6 +192,12 @@ message**. Each dispatch:
   no container, header markup, heading or empty state of its own (BP61). Structure from the
   inventory and the contract; every domain fact from facts.md and the source docs (BP52); every
   screen decides its phone layout (BP62).
+- **Build each route on the surface its inventory row says**, not on the surface its file path
+  suggests (BP51, BP74). A `dialog` or `both` row means this group also gets the `@modal` slot,
+  its null `default.tsx`, and the layout's leak guard; a `both` row means the page and the
+  intercepted route render ONE shared component with a surface flag, so the two cannot drift.
+  A row whose Surface cell is empty is an unfinished inventory — rule it before building it,
+  and say in the return that the inventory was incomplete.
 - The agent owning the group that claims `/` also executes that route's disposition ruling and
   appends the reasoned line to `scripts/docs-check.ignore` (BP58) — two pages resolving to `/`
   is a build error, and a silently deleted doc-owned file is drift.
@@ -220,7 +226,12 @@ For round R = 1, then R = 2, over the groups not yet passed:
      used uniformly, and every open question is an anchor read by the one inspector with nothing
      visible on the screen (BP70). Include a BP71–BP72 pass over every inherited component the
      group renders: it is judged as part of the screen, not by who wrote it — and where the
-     screen is the way into an account, against BP72's list. Include a
+     screen is the way into an account, against BP72's list. Include a BP74–BP75 pass, which is
+     the only one that cannot be done from a single file: for every route reached by a link from
+     another route in this group, list both screens' contents side by side and say what is left
+     after the parent is subtracted — a couple of facts and one control is a finding, whatever
+     the route is named — and flag every link whose destination's whole message is that there is
+     nothing to do there. Include a
      `code-ui` pass too: all four states present, every conditional message's space reserved, no
      raw server error rendered.
    - _Spec-fidelity reviewer_: inputs = the same directories, `.cache/mock-ui/facts.md`, and the

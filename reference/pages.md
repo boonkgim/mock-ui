@@ -35,13 +35,19 @@ be a second, staler spec that every future product would be bent to fit.
 
 `.cache/mock-ui/pages.md` holds one section per route group, and each section is a table:
 
-| URL | Page file | Purpose | Key shadcn components | Mock data shown |
+| URL | Page file | Surface | Purpose | Key shadcn components | Mock data shown |
+
+**Surface is a column, not a habit.** It holds `page`, `dialog` or `both`, with the reason, for
+every route — and the rule below is what fills it. A column is the enforcement: a ruling that
+lives only in a paragraph gets skipped for exactly the routes it was written for, because a route
+that reads as a detail screen never prompts anyone to go and re-read a paragraph about forms. An
+empty cell is an unfinished inventory, and `—` is not an answer.
 
 Then, under the table, that group's extras: `layout.tsx` (its shell composition), `loading.tsx`,
 `error.tsx`, every `not-found.tsx`, and every `actions.ts`. Mark a route **form** where it
-mutates; a form route always gets a colocated `actions.ts` (BP23–BP29), and carries a
-`page`/`dialog` ruling with its reason — see below. A group holding one or more `dialog` routes
-also lists its `@modal` slot and that slot's `default.tsx` among the extras.
+mutates; a form route always gets a colocated `actions.ts` (BP23–BP29). A group holding one or
+more `dialog` or `both` routes also lists its `@modal` slot and that slot's `default.tsx` among
+the extras.
 
 **Groups come from the PRD's audiences, not from a template.** The common shape is
 `(public)` / `(customer)` / `(admin)` — anonymous visitor, signed-in owner of their own rows,
@@ -62,28 +68,57 @@ handoff is somebody else's, but the screen it leaves from and the screen it retu
 run's. A journey with a hole in the middle is the most expensive kind of missing route, because
 the hole is only visible when someone tries to walk it.
 
-**Rule every form route page-or-dialog, in the table, before anything is built.** BP51 and
-BP68 say how a dialog is built and when one is allowed, but both are written as constraints on
-a dialog — so an inventory that never considers one never meets them, and every form ships as a
-full page by default. Make the choice a decision the inventory records rather than a rule the
-builder might trip over: mark each **form** route `page` or `dialog` with the reason.
+**Rule every route's surface, in the table, before anything is built.** BP51 and BP68 say how a
+dialog is built and when one is allowed, but both are written as constraints on a dialog — so an
+inventory that never considers one never meets them, and everything ships as a full page by
+default. Make the choice a decision the inventory records rather than a rule the builder might
+trip over.
 
-Two tells decide it, and both are visible from the route list alone:
+**Rule every route, not only the ones that look like forms.** The route this misses is never the
+one called "the sign-up form"; it is the detail screen with one control on it — a date with a
+seat count, an item with a quantity, a request with an approve button. It reads as a _detail
+page_ that happens to contain an action, so a rule about form routes never fires on it, and it
+ships as the most expensive screen in the product's main journey. If the reason a route exists is
+one action, it is in scope, whatever it looks like from its name.
 
+Three tells decide it, and all three are visible from the route list alone:
+
+- **The covering test — what is left when the parent is subtracted?** Take the screen that links
+  here and cover everything this route shows that the visitor already read there. If what remains
+  is a couple of facts and one control, this route is its parent's row re-rendered: the chrome it
+  would get (breadcrumb, restated title, restated subject, section heading) exists only to
+  rebuild a context the visitor never left. If what remains stands on its own, it is a
+  destination. Run this test by listing both screens' contents side by side — it is not a
+  judgement call, and doing it from memory is how a route keeps a page it has not earned.
 - **Where the links come from.** If every inbound link sits on a screen that already names the
-  thing being acted on, the form is a side-step from that screen, not a destination — the page
-  it would get spends its whole chrome (breadcrumb, restated title, restated subject) rebuilding
-  a context the visitor never left. A route also reached from outside the app — an email link, a
-  bookmark, a search result, a payment return — is a destination and stays a page.
-- **Whether the success state can find its own way out.** A form whose confirmation has to grow
+  thing being acted on, this is a side-step from that screen. Inbound links from _outside_ the
+  app — an email, a bookmark, a search result, a pasted link, a payment return — are entries with
+  no screen behind them, and they are what `both` is for; see below.
+- **Whether the success state can find its own way out.** A confirmation that has to grow
   "back to X" and "on to Y" buttons is telling you it stranded the visitor. Closing a dialog
   restores whatever screen it was opened from, so the exit costs one control and is always
   right; a page has no screen underneath and must invent destinations that are guesses.
 
+**`both` is a verdict, and usually the right one.** Cold and warm entry are different situations,
+not a conflict to resolve in favour of one of them: a link pasted into a chat has nothing behind
+it and needs the whole screen stated, while the visitor who clicked a row a second ago has just
+read most of it and wants the row back. BP51's parallel + intercepting routes serve both from a
+single route — the page is what a hard navigation, a refresh, a crawler and a no-JS request get;
+the dialog is what an in-app link gets — so "it is shareable" stopped being an argument for a
+page years ago. Rule `both` whenever the covering test says side-step and the route is reachable
+from outside the app. `page` is for a route that fails the covering test; `dialog` is for one
+that passes it and has no cold entry at all.
+
+When a route is `both`, the decision inside it is written **once**, in a component the page and
+the intercepted route each render with a surface flag — the way `page`/`dialog` variants drift is
+that someone fixes the copy on the surface they were looking at.
+
 Length is not one of the tells, and neither is how consequential the action is on its own — a
 three-field form is a page when it is entered cold, and a longer one is a dialog when it is a
 side-step from a screen the visitor wants to stay on. What rules a dialog out is a flow with
-steps, a state the visitor would be upset to retype, or an entry from outside the app (BP68).
+steps, a state the visitor would be upset to retype, or a handoff the app does not own (BP68).
+A payment, an identity provider, a multi-screen wizard: those stay pages even when the screen
+that starts them is a dialog.
 
 **Cover the states, not just the happy path.** Every list needs an empty state, every form an
 error state, every async surface a pending one, and every mutation a success the user can see
@@ -130,7 +165,7 @@ The contract records, each in a line or two with the reason:
   leave — with, for each, whether it was built and where, or judged not needed and why (BP69).
   This is the section a reviewer reads to find out what the spec forgot.
 
-In **extension** mode the contract is *read* rather than written: each line cites the file the
+In **extension** mode the contract is _read_ rather than written: each line cites the file the
 existing app answers it from, and a line the app answers inconsistently is reported as a finding
 rather than resolved by picking a side.
 
