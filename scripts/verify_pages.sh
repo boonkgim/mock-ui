@@ -210,6 +210,31 @@ else
   pass "BP62 every columned/tabular screen carries a breakpoint"
 fi
 
+# --- Check 16: BP23/BP27 — a form is a `<form>`, and a credential field carries its autofill
+# token. Both failures are invisible on screen and invisible in a click-through review: a panel
+# of onClick buttons looks exactly like a form until someone presses Enter, and a password field
+# with no autocomplete is filled by heuristics often enough to look fine while a password manager
+# is still unable to tell a credential being entered from one being chosen. components/ui is the
+# vendored registry (BP41) and owns neither decision.
+echo "===== BP23 inputs outside a form / BP27 credential field without autoComplete =====" >>"$LOG"
+FORMLESS=""
+while IFS= read -r f; do
+  grep -q '<form' "$f" || FORMLESS="$FORMLESS $f"
+done < <(grep -rl '<Input' --include='*.tsx' "$SRC/app" "$SRC/components" 2>/dev/null |
+  grep -v "^$SRC/components/ui/" || true)
+NO_AC=""
+while IFS= read -r f; do
+  grep -q 'autoComplete' "$f" || NO_AC="$NO_AC $f"
+done < <(grep -rlE 'type="(password|email)"' --include='*.tsx' "$SRC/app" "$SRC/components" 2>/dev/null |
+  grep -v "^$SRC/components/ui/" || true)
+if [ -n "$FORMLESS" ] || [ -n "$NO_AC" ]; then
+  printf '%s\n' $FORMLESS $NO_AC >>"$LOG"
+  [ -n "$FORMLESS" ] && fail "BP23 <Input> with no <form> in:$FORMLESS"
+  [ -n "$NO_AC" ] && fail "BP27 email/password field with no autoComplete in:$NO_AC"
+else
+  pass "BP23/BP27 every input is in a form and every credential field is autofillable"
+fi
+
 echo "----------------------------------------"
 if [ "$FAILURES" -gt 0 ]; then
   echo "RESULT: $FAILURES check(s) failed. Full command output: $LOG"

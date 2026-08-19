@@ -16,7 +16,7 @@ behind it, and this file does not.
 
 - Next.js 16 docs to consult
 - Design findings (1–5)
-- Best practices — DO / DON'T (BP1–BP70)
+- Best practices — DO / DON'T (BP1–BP72)
 - AI UI anti-patterns to avoid (AP1–AP32)
 
 ## Next.js 16 docs to consult
@@ -119,6 +119,13 @@ guide under `apps/web/node_modules/next/dist/docs/`:
 
 - BP23. Mutations are server actions in `"use server"` files (`src/app/**/actions.ts`), invoked
   through `<form action={…}>`. No `onClick` fetch, and no route handler for a form post.
+  The `<form>` half of that holds even where the submit path is NOT a server action — an auth
+  SDK, a third-party client, anything: fields go in a `<form>` with a `type="submit"` button,
+  every time. A panel of `onClick` buttons with no form element around them looks identical on
+  screen and is not the same control: Enter in a field does nothing, which is how a large share
+  of people submit a sign-in; the mobile keyboard's Go key is dead; and no submit event fires,
+  which is the event a password manager saves a new credential on. Reviewers check for the
+  element, not for the appearance.
 - BP24. Every server action starts with a session check — plus a row-ownership check for a
   customer resource. An action is reachable by direct POST, so the guard lives in the action even
   at mock stage, and a layout guard is navigation rather than security.
@@ -129,24 +136,37 @@ guide under `apps/web/node_modules/next/dist/docs/`:
 - BP26. The submit button reflects pending state and never goes silent: disabled while pending,
   with visible pending text. Where the form validates client-side, it is disabled until valid too.
 - BP27. Inputs carry `name` attributes read via `formData.get()`, and every input has a
-  `<Label htmlFor>` matching its `id`. A placeholder is never the only label.
+  `<Label htmlFor>` matching its `id`. A placeholder is never the only label. Any field a browser
+  can fill also carries its `autoComplete` token — `email`, `name`, `tel`, `current-password`,
+  `new-password`, the `street-address` family. Heuristics fill some of it anyway, which is why
+  the omission survives a click-through review: what they cannot do is tell a password being
+  entered from a password being chosen, so the token is what decides whether a saved credential
+  is offered or a new one is stored.
 - BP28. On success: `revalidatePath()` (or `router.refresh()`) and then `redirect()` — in that
   order, because `redirect` throws and code after it never runs. A `redirect()` inside a `try`
   is a silent no-op (`web` skill).
 - BP29. Action messages render where they belong, per `code-ui`: field errors under their field,
   whole-attempt failures in one form-level alert **at the top of the form**. Field message slots
   reserve their line (`min-h-[1lh]`) so nothing moves when a message appears; the form-level
-  alert does not reserve space, because a block has no single height to hold. Errors are
-  `role="alert"`, confirmations `role="status"` — shadcn's `Alert` hardcodes `role="alert"`, so a
-  confirmation overrides it.
+  alert does not reserve space, because a block has no single height to hold. Confirmations are
+  `role="status"` — shadcn's `Alert` hardcodes `role="alert"`, so a confirmation overrides it.
+  A failed submit is announced ONCE, by the form-level summary: it takes focus (`tabIndex={-1}`
+  and a ref, focused on every failed attempt so a second press of the same mistake announces
+  again), and because focus is what announces it, it is NOT also a live region — an `alert` that
+  is focused as it appears reads itself twice, so the summary overrides the role. Each field
+  problem is a row in that summary linking to its field (`href="#<input id>"`, GOV.UK's error
+  summary), and the reserved slot beside the field repeats the text with no role of its own,
+  reached through `aria-describedby`. Three live regions on a two-field form is the shape to
+  look for: it comes from adding `role="alert"` per message rather than per submit.
 - BP53. **No form library, and no native validation bubbles.** The `<form>` gets `noValidate`
   and blank/malformed input is checked in the browser with plain state, so there is no round
   trip; the server owns length, uniqueness and credentials, and stays the source of truth
   (BP16, BP24, BP25 unchanged). Keep semantic input types (`email`, `tel`) — `noValidate` strips
   their validation, not their mobile-keyboard semantics. Never render a raw server error string:
   map its `code` to your own copy and log anything unmapped. Clear a field's error when that
-  field is edited, or it stays red while the user fixes it. Exemplar:
-  `apps/web/src/components/auth-panel.tsx`. Installing react-hook-form or zod for a mock form is
+  field is edited, or it stays red while the user fixes it. Exemplars:
+  `apps/web/src/components/auth-panel.tsx` (client SDK) and
+  `apps/web/src/components/account/set-password-form.tsx` (server action). Installing react-hook-form or zod for a mock form is
   out of scope — it is a second form philosophy in an app that already has one.
 
 ### Accessibility
@@ -234,7 +254,7 @@ guide under `apps/web/node_modules/next/dist/docs/`:
 
 ### The shell, the breakpoints, and the mock's own furniture
 
-The mock owes the final layout minus design and minus the backend. These eight rules are what
+The mock owes the final layout minus design and minus the backend. These ten rules are what
 that sentence costs: every one of them names a structural decision that is cheap to make once,
 here, and expensive to discover missing three slices later.
 
@@ -258,7 +278,12 @@ here, and expensive to discover missing three slices later.
   design pass finally gives it a value.
 - BP64. **The mock's annotations are one module behind one flag, and none of them are on the
   screen.** Open questions are the run's most valuable output, so they are recorded against the
-  exact element they are about — but as an *attribute*, never as visible copy beside it (BP70).
+  exact element they are about — but as an _attribute_, never as visible copy beside it (BP70).
+  A question is anchored on every screen where it is FELT, not only on the screen that would
+  answer it. "How does a customer set a password?" anchored on the password screen is a note the
+  reader has already got past; the same question anchored at sign-in is a dead end with nobody
+  behind it. When the two differ, the screen where someone is stuck is the one that must carry
+  it.
   ONE mock-only directory holds the anchor and the inspector that reads them, gated by ONE flag.
   Never a second copy per area. With the flag off the screen must be the layout that will ship;
   deleting the annotations at the end must be deleting a directory and fixing imports, never
@@ -266,7 +291,8 @@ here, and expensive to discover missing three slices later.
 - BP65. **Scaffold demo UI is removed, not parked.** In greenfield mode, whatever the scaffold
   shipped to prove its own wiring — a diagnostics panel, a "test item" link, a sample page — is
   deleted rather than moved into the product's header, footer or sidebar. What is genuinely real
-  is re-homed into the product screen that owns that job (pages.md, disposition rulings). A
+  is re-homed into the product screen that owns that job (pages.md, disposition rulings), where
+  it is then reviewed like everything else on that screen (BP71). A
   doc-owned file carries its reasoned `docs-check.ignore` line with it (BP58). In extension mode
   this rule is inert: there is no scaffold UI left to rule on, and the existing product shell is
   law.
@@ -292,7 +318,7 @@ here, and expensive to discover missing three slices later.
   built only from what was written arrives missing exactly the parts the spec author took for
   granted. So: ask what this kind of product needs, build it, and WRITE THE COPY — invented copy
   marked as invented is reviewable and correctable, and a missing page is neither. BP52 still
-  holds and is not in tension with this: it forbids inventing *the domain* — a status, a price
+  holds and is not in tension with this: it forbids inventing _the domain_ — a status, a price
   rule, a field, a noun the business does not use — not inventing the ordinary furniture every
   product of this kind has. Every invented line carries an anchor (BP70) so the reviewer sees
   precisely what was made up, and the shell contract records which slots were judged not needed
@@ -305,10 +331,48 @@ here, and expensive to discover missing three slices later.
   once, above every area, styled like the framework's own dev indicator, in the corner opposite
   it — lists them and highlights the element each one is about on hover. The question stays
   written next to the markup it is about, which is the only place it stays true; only its
-  *presentation* moves. Where the question is that a screen cannot say anything at all, the
+  _presentation_ moves. Where the question is that a screen cannot say anything at all, the
   screen still says the most plausible production thing (BP69) and the anchor carries the doubt.
   A screen with nothing undecided shows no control at all, so a visible count always means work.
-
+- BP71. **A component the run inherits is a component the run reviews.** BP65 re-homes what the
+  scaffold proved was real into the product screen that owns that job. Re-homing is a decision
+  about WHERE it lives, never an exemption from the standard everything else on that screen is
+  held to — and it reads like one, because the component compiles, works, and has a comment
+  explaining why it was kept. It entered the repo to prove something (a cookie crossing a proxy,
+  a query reaching an API, a card being charged) and was reviewed against that, which is a
+  different bar from "this is a screen a stranger will use". So its BEHAVIOUR is untouched and
+  its SURFACE is reviewed like anything the run wrote: the four states, the form element, the
+  labels and autocomplete, the pending state, the messages, the phone layout. Two consequences
+  for the run itself: the re-homing agent returns the list of components it re-homed and which
+  group now owns each, and every such component is in that group's reviewer inputs even though
+  it does not live under `components/<area>/` — a file nobody put in front of a reviewer is a
+  file nobody reviewed, and the exemption is invisible afterwards because the screen looks
+  finished. The genuine exemption is BP66's, and the line is ownership: a third party's embedded
+  widget is not ours to rewrite; our own earlier code is, and "we wrote it under a different
+  standard" is the reason to review it rather than a reason not to.
+- BP72. **The way into an account is a screen, and it has a known shape.** Every product with
+  accounts ships it, no PRD writes it down, and it is where BP69 is most often paid lip service:
+  a form that authenticates is not the same thing as a sign-in screen. What it owes, all of it
+  cheap here and none of it a domain invention:
+  - **One primary action per form.** Sign in and sign up are one form in two modes — not twin
+    buttons — with the other path a link that changes the question. They differ in autocomplete
+    (`current-password` vs `new-password`), in outcome (a session vs a verification mail) and in
+    which failures are possible; offered side by side, the form makes the visitor guess which of
+    two questions it is asking and answers a wrong guess with an error about the guess.
+  - **A way past a forgotten password**, on the sign-in screen itself. If the flow is undecided,
+    the control is present and inert with the gap anchored on it (BP64) — a sign-in screen whose
+    only answer to a forgotten password is nothing is a dead end, and it is the omission nobody
+    notices until it is live.
+  - **A destination.** Signing in ends on the page that was asked for (`?next=`) or a default
+    that is a real screen, never back on the sign-in page re-rendered into a signed-in widget.
+    A `?next=` is attacker-supplied, so it is sanitised to a path on this origin before it is
+    navigated to — `//host` and `/\host` start with a slash and are protocol-relative URLs, so
+    `startsWith("/")` is not the check. Put the sanitiser in its own module with its cases as a
+    test; it is the one piece of a mock that is a security control.
+  - **Arriving signed in is a redirect, not a state.** A bookmark, a back button or a second tab
+    lands here with a session; that is the same navigation from the other direction.
+  - **A reveal control on the password field** (`aria-pressed`, one stable label) — the cheapest
+    fix there is for the commonest cause of a failed sign-in, which is a typo nobody can see.
 
 ### Theming / design tokens
 

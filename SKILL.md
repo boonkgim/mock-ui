@@ -13,7 +13,7 @@ never learns which it got.
 **What the mock owes: the final layout, minus design and minus the backend.** Every structural
 decision the real app will ship — the shell, the route tree, what is on each screen, where it
 sits, how it reflows on a phone, which of the four states it can be in — is made here, once, and
-the vertical slices only swap the data behind it. What is deliberately *not* made here is visual
+the vertical slices only swap the data behind it. What is deliberately _not_ made here is visual
 design (colour, type scale, spacing rhythm, imagery: tokens, and a later pass owns them) and the
 API. A screen the mock skips, or a breakpoint it never decides, is a layout decision handed to
 whoever writes the slice — which is the failure this skill exists to prevent.
@@ -63,7 +63,7 @@ Reference files (read by subagents, not by this turn):
 - `.claude/skills/mock-ui/reference/pages.md` — how the route inventory and the shell contract
   are derived and what they must contain: group structure, shared files, mode rulings, what is
   off-limits, the component add-list.
-- `.claude/skills/mock-ui/reference/conventions.md` — design findings 1–5, BP1–BP68, AP1–AP32.
+- `.claude/skills/mock-ui/reference/conventions.md` — design findings 1–5, BP1–BP72, AP1–AP32.
   Doubles as the review-loop checklist.
 
 Project skills every subagent that writes UI must read: **`code-ui`** (how UI is written here —
@@ -167,11 +167,14 @@ Dispatch one subagent:
   (anchor + inspector) and its flag
   (BP64); the root `not-found.tsx` and `global-error.tsx` (BP67). In **greenfield** mode it also
   removes the scaffold's demo UI and re-homes whatever of it is real (BP65), appending the
-  reasoned line to `scripts/docs-check.ignore` for every doc-owned file it touches (BP58). In
+  reasoned line to `scripts/docs-check.ignore` for every doc-owned file it touches (BP58). A
+  re-homed component's behaviour is left alone and its surface is not: it is now part of a
+  product screen and is held to the same rules as one (BP71). In
   **extension** mode it writes nothing new if the app already has these — it returns the paths
   the group agents must import instead.
-- Return: the module's files with line counts, and the import list group agents are to use — at
-  most 12 lines.
+- Return: the module's files with line counts, the import list group agents are to use, and —
+  named separately — every component it re-homed with the group that now owns it, because that
+  list is what Phase 6 adds to the reviewer's inputs — at most 14 lines.
 
 ## Phase 5 — One agent per group (single message)
 
@@ -201,7 +204,12 @@ For round R = 1, then R = 2, over the groups not yet passed:
 
 1. **Reviewers** — two per remaining group, all dispatched in one message:
    - _Conventions reviewer_: inputs = `apps/web/src/app/(<group>)/`, the group's components,
-     `.cache/mock-ui/shell.md`, `reference/conventions.md`, and the `code-ui` skill. Score every
+     **every other component the group's pages import that this run has not already reviewed** —
+     Phase 4's re-homed list, and anything under `src/components/` outside `components/<area>/`
+     (BP71) — `.cache/mock-ui/shell.md`, `reference/conventions.md`, and the `code-ui` skill.
+     A component is reviewed because a screen renders it, never because this run authored it:
+     scoping the inputs by who wrote the file is how an inherited component reaches production
+     unreviewed while every screen around it passes. Score every
      BP/AP id except those tagged `[scan]` (the script checks those). Findings to
      `.cache/mock-ui/review-<group>-r<R>.md`, each citing rule id + file + line. Include an
      explicit BP54–BP56 pass, screen by screen: each descriptive slot is one short sentence,
@@ -210,7 +218,9 @@ For round R = 1, then R = 2, over the groups not yet passed:
      rather than centred. Include a BP61–BP64 pass: every shared element comes from the shell
      module, every screen's phone layout is a decision rather than a default, the design seam is
      used uniformly, and every open question is an anchor read by the one inspector with nothing
-     visible on the screen (BP70). Include a
+     visible on the screen (BP70). Include a BP71–BP72 pass over every inherited component the
+     group renders: it is judged as part of the screen, not by who wrote it — and where the
+     screen is the way into an account, against BP72's list. Include a
      `code-ui` pass too: all four states present, every conditional message's space reserved, no
      raw server error rendered.
    - _Spec-fidelity reviewer_: inputs = the same directories, `.cache/mock-ui/facts.md`, and the
