@@ -16,7 +16,7 @@ behind it, and this file does not.
 
 - Next.js 16 docs to consult
 - Design findings (1–5)
-- Best practices — DO / DON'T (BP1–BP72)
+- Best practices — DO / DON'T (BP1–BP73)
 - AI UI anti-patterns to avoid (AP1–AP32)
 
 ## Next.js 16 docs to consult
@@ -254,7 +254,7 @@ guide under `apps/web/node_modules/next/dist/docs/`:
 
 ### The shell, the breakpoints, and the mock's own furniture
 
-The mock owes the final layout minus design and minus the backend. These ten rules are what
+The mock owes the final layout minus design and minus the backend. These eleven rules are what
 that sentence costs: every one of them names a structural decision that is cheap to make once,
 here, and expensive to discover missing three slices later.
 
@@ -323,6 +323,12 @@ here, and expensive to discover missing three slices later.
   product of this kind has. Every invented line carries an anchor (BP70) so the reviewer sees
   precisely what was made up, and the shell contract records which slots were judged not needed
   and why, because "decided against" and "nobody thought of it" are indistinguishable otherwise.
+  **This rule has a review side, and it is the one that gets skipped.** A reviewer whose question
+  is "does what is here match the spec" scores a missing thing the spec never mentioned as clean
+  in both directions — the absence reads as restraint, and gets written up as compliance with
+  BP52. So a screen is also reviewed against its GENRE: name what kind of screen it is, then ask
+  what a shipped one of those has that this does not. That comparison needs no rule list and no
+  spec, and giving it either is what collapses it back into scoring.
 - BP70. **Open questions go in an inspector, never on the screen.** A mock exists to be put in
   front of a person. Editorial asides about what the spec failed to decide destroy that: the
   tester reads the asides instead of the screen, every judgement they give is about a page that
@@ -373,6 +379,17 @@ here, and expensive to discover missing three slices later.
     lands here with a session; that is the same navigation from the other direction.
   - **A reveal control on the password field** (`aria-pressed`, one stable label) — the cheapest
     fix there is for the commonest cause of a failed sign-in, which is a typo nobody can see.
+- BP73. **A rationale in a comment is not evidence.** Code that explains why it is exempt is the
+  code to look at hardest, and it is treated the opposite way by default: a reviewer arrives,
+  finds a docstring that has already reasoned the question through, and ratifies it. The
+  reasoning is usually sound about the thing it was written about and silent about the thing
+  being asked — "rendered unchanged, because it is the real surface and a mock beside it would
+  sign nobody in" is a correct argument about BEHAVIOUR that says nothing about whether the
+  surface was ever reviewed, and it will be quoted back as a pass on both. So: a comment is
+  read as a claim to check, never as a verdict to adopt; a reviewer that agrees with one says
+  what it independently checked; and where the comment argues an omission, the omission is the
+  finding until something other than the comment justifies it. The tell is a review note that
+  paraphrases the source it reviewed.
 
 ### Theming / design tokens
 

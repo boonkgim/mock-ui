@@ -63,7 +63,7 @@ Reference files (read by subagents, not by this turn):
 - `.claude/skills/mock-ui/reference/pages.md` — how the route inventory and the shell contract
   are derived and what they must contain: group structure, shared files, mode rulings, what is
   off-limits, the component add-list.
-- `.claude/skills/mock-ui/reference/conventions.md` — design findings 1–5, BP1–BP72, AP1–AP32.
+- `.claude/skills/mock-ui/reference/conventions.md` — design findings 1–5, BP1–BP73, AP1–AP32.
   Doubles as the review-loop checklist.
 
 Project skills every subagent that writes UI must read: **`code-ui`** (how UI is written here —
@@ -202,7 +202,7 @@ message**. Each dispatch:
 
 For round R = 1, then R = 2, over the groups not yet passed:
 
-1. **Reviewers** — two per remaining group, all dispatched in one message:
+1. **Reviewers** — three per remaining group, all dispatched in one message:
    - _Conventions reviewer_: inputs = `apps/web/src/app/(<group>)/`, the group's components,
      **every other component the group's pages import that this run has not already reviewed** —
      Phase 4's re-homed list, and anything under `src/components/` outside `components/<area>/`
@@ -228,14 +228,36 @@ For round R = 1, then R = 2, over the groups not yet passed:
      required fact present, nothing unrequested invented — and treat a fact the spec never
      stated as a gap to report, not a defect to fix. Findings to
      `.cache/mock-ui/fidelity-<group>-r<R>.md`, citing BP52 + file + line + the passage.
-   - Both return: PASS/FAIL, finding count, failing rule ids, and the files named — at most 15
-     lines each. PASS with zero findings is a real verdict; do not manufacture findings.
-2. A group is done when both reviewers return PASS with zero findings. **All findings resolved**
-   — no partial credit.
+   - _Fresh-eyes reviewer_ (BP69, BP73): inputs = the group's routes and the components they
+     render, and the not-in-scope list from `.cache/mock-ui/facts.md`. **Deliberately not given
+     `reference/conventions.md` and not given the PRD** — a rule list turns this into a third
+     scorer, and the spec re-anchors it to what someone remembered to write down, which is the
+     blind spot it exists to cover. Its question is not "is what is here correct" but "what does
+     a shipped version of this screen not have". For every route: name the screen's genre in a
+     few words (a sign-in, a checkout, a list with filters, a record detail, a destructive
+     confirm), then walk it as a user *in the source* — press Enter in the form, arrive already
+     signed in, arrive with the list empty, get it wrong twice, come back on a phone — and say
+     what is missing. Bounds, or it becomes a slop generator: it may propose FURNITURE only
+     (controls, states, affordances, destinations, ordinary copy — BP69's category), never a
+     domain fact, status, price rule or noun (BP52); nothing on the not-in-scope list; and a
+     rationale it finds in a comment is not evidence (BP73) — a file that argues its own
+     exemption is the one to look at hardest. Findings to
+     `.cache/mock-ui/shape-<group>-r<R>.md`, one row per route so a screen cannot be skimmed,
+     each citing file + line + the genre the comparison was against.
+   - All three return: PASS/FAIL, finding count, failing rule ids, and the files named — at most
+     15 lines each. PASS with zero findings is a real verdict; do not manufacture findings.
+2. A group is done when all three reviewers return PASS with zero findings. **All findings
+   resolved** — no partial credit.
 3. **Fixers** — per failing group, one fixer subagent per named file, dispatched in one message
    per group. Inputs = whichever review file named it plus that single file path; task = apply
    that file's findings; return = the path and new line count, at most 2 lines. A finding
    spanning files goes to one fixer owning exactly those files.
+
+   **One exception, and it is not a fixer's to make:** a fresh-eyes finding that needs a NEW
+   ROUTE — a password reset, a sign-up screen, a confirmation step — is an inventory defect, and
+   the inventory was approved by the user at the Phase 1 checkpoint. It goes to Phase 8 as a
+   question, never into a fixer's hands. What a fixer may do on that screen is make the gap
+   visible where it is felt (BP64): the control present and inert, with the question anchored.
 
 After round 2, stop looping and carry unresolved rule ids + files into Phase 8.
 
@@ -255,7 +277,8 @@ One repair round only; remaining FAIL lines go into Phase 8.
 
 At most 20 lines: the mode, routes built per group, the shell contract's headline decisions,
 review rounds used and any unresolved rule ids, verify verdict, the spec gaps Phase 0 and the
-fidelity reviewers surfaced (questions for the user — the most valuable output of the run), and
+fidelity reviewers surfaced plus the route-level findings the fresh-eyes reviewers raised
+(questions for the user — the most valuable output of the run), and
 two notes on what stays cheap: every token value is in `src/styles/theme.css`, so a re-theme is
 a one-file edit with no page recode; and every open question is behind one flag in one module,
 so seeing the layout as it will ship is flipping the flag, and deleting the annotations is
