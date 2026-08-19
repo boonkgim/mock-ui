@@ -200,8 +200,23 @@ guide under `apps/web/node_modules/next/dist/docs/`:
   suspends only inside it; (b) the layout wraps the slot in a container that hides children
   lacking `data-modal-chrome` (`[&>*:not([data-modal-chrome])]:hidden`), so only the leaked
   page-shaped fallback is suppressed. Consequential, multi-step, or externally-entered flows
-  (checkout, login, set-password, cancellation) stay full pages. Never fork the copy or the form
-  between page and dialog.
+  (checkout, login, set-password, cancellation) stay full pages. Which routes get this treatment
+  is decided in the inventory, not at build time (`pages.md`, page-or-dialog) — this rule is
+  written as a constraint on a dialog, so it never fires for a run that only ever builds pages.
+  Three things the shape costs, each of which fails quietly:
+  - **`notFound()` is not available inside the slot.** It resolves to the boundary above and
+    replaces the whole screen — including the page the dialog was meant to sit on top of. The
+    intercepted route reports its own miss inline, as another branch of the dialog with its own
+    `DialogTitle`; the canonical page beside it still answers the same URL with a real 404.
+  - **The shell wrapper is `display: contents`.** The dialog is portalled to the body, so the
+    slot contributes nothing to the flow — a wrapper that is a block leaves an empty row in the
+    layout, under every page in the group, forever.
+  - **Never fork the copy or the form between page and dialog** — one component, one `surface`
+    flag. Exactly two things may differ, and both are chrome the surface already owns: the
+    **panel** (a page draws a Card; a dialog *is* the card, and a second border inside it is a
+    mistake) and the **exit** (a page must name destinations; a dialog closes, which restores
+    whatever screen it was opened from). Fields, validation, messages, terms and the stateful
+    heading are written once and read the same in both.
 - BP52. **No invention.** Every domain noun, form field, price rule, status and copy fact traces
   to the PRD, the data model, the run's inventory, or `.cache/mock-ui/facts.md`. Capture forms
   mirror their entity's columns exactly — names, required/optional, nullability pairings — and a

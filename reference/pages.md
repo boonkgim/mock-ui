@@ -39,7 +39,9 @@ be a second, staler spec that every future product would be bent to fit.
 
 Then, under the table, that group's extras: `layout.tsx` (its shell composition), `loading.tsx`,
 `error.tsx`, every `not-found.tsx`, and every `actions.ts`. Mark a route **form** where it
-mutates; a form route always gets a colocated `actions.ts` (BP23–BP29).
+mutates; a form route always gets a colocated `actions.ts` (BP23–BP29), and carries a
+`page`/`dialog` ruling with its reason — see below. A group holding one or more `dialog` routes
+also lists its `@modal` slot and that slot's `default.tsx` among the extras.
 
 **Groups come from the PRD's audiences, not from a template.** The common shape is
 `(public)` / `(customer)` / `(admin)` — anonymous visitor, signed-in owner of their own rows,
@@ -59,6 +61,29 @@ payment provider, an email link or an identity provider are the ones an inventor
 handoff is somebody else's, but the screen it leaves from and the screen it returns to are this
 run's. A journey with a hole in the middle is the most expensive kind of missing route, because
 the hole is only visible when someone tries to walk it.
+
+**Rule every form route page-or-dialog, in the table, before anything is built.** BP51 and
+BP68 say how a dialog is built and when one is allowed, but both are written as constraints on
+a dialog — so an inventory that never considers one never meets them, and every form ships as a
+full page by default. Make the choice a decision the inventory records rather than a rule the
+builder might trip over: mark each **form** route `page` or `dialog` with the reason.
+
+Two tells decide it, and both are visible from the route list alone:
+
+- **Where the links come from.** If every inbound link sits on a screen that already names the
+  thing being acted on, the form is a side-step from that screen, not a destination — the page
+  it would get spends its whole chrome (breadcrumb, restated title, restated subject) rebuilding
+  a context the visitor never left. A route also reached from outside the app — an email link, a
+  bookmark, a search result, a payment return — is a destination and stays a page.
+- **Whether the success state can find its own way out.** A form whose confirmation has to grow
+  "back to X" and "on to Y" buttons is telling you it stranded the visitor. Closing a dialog
+  restores whatever screen it was opened from, so the exit costs one control and is always
+  right; a page has no screen underneath and must invent destinations that are guesses.
+
+Length is not one of the tells, and neither is how consequential the action is on its own — a
+three-field form is a page when it is entered cold, and a longer one is a dialog when it is a
+side-step from a screen the visitor wants to stay on. What rules a dialog out is a flow with
+steps, a state the visitor would be upset to retype, or an entry from outside the app (BP68).
 
 **Cover the states, not just the happy path.** Every list needs an empty state, every form an
 error state, every async surface a pending one, and every mutation a success the user can see
