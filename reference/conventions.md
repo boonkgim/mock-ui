@@ -334,6 +334,24 @@ here, and expensive to discover missing three slices later.
   does not reach — see `code-ui`. A slot with no placeholder collapses to nothing and then
   jumps, which on the screen that takes the money is the worst place in the product to have
   skipped a state.
+  Two more, both about the seam rather than the widget:
+  - **A widget built from a server-created session is priced when it is created.** Its line
+    items, its amount and its currency are fixed at that moment; the provider reads its
+    session-fetcher once and ignores every later one, and nothing about a mounted iframe
+    follows the page around it. So the moment the page offers ANY control that changes what is
+    being bought — a "Change" link back to the quantity, a promo code, a plan switch — the
+    widget must be RE-CREATED rather than updated, keyed on the inputs it was priced from. Put
+    the key inside the component, not at the call site: a call site is where it gets forgotten,
+    and the failure is a visitor who edits their order, watches the total change beside the
+    form, and pays the amount they changed away from.
+  - **"Not ours to rewrite" is not "not ours to notice"** (BP73, applied to this exemption).
+    The exemption covers the widget's BEHAVIOUR. It does not cover what the screen as a whole
+    says: a scaffold's proof-of-pipeline session charges one fixed item in one fixed currency,
+    and rendered unchanged beside a summary the run priced itself, it puts two different
+    amounts on the screen that takes the money. That contradiction is the run's finding even
+    though neither half is the run's to fix — it goes in the report as what the owning slice
+    must finish, and the seam it lands in is built now, because a slice that arrives correct
+    into a page that cannot re-create the session is still a screen charging the wrong amount.
 - BP67. **Root fallbacks exist.** `src/app/not-found.tsx` and `src/app/global-error.tsx` are
   written and render inside the shell. An unknown URL and a layout-level crash are two real
   screens of the product, and they are the two nobody navigates to on purpose.
