@@ -71,9 +71,13 @@ the four states, messages, accessibility, layout that does not shift) and **`web
 live, the theme contract, the vendored shadcn checkout). Where they and this skill's checklist
 disagree, **they win** — they are the repo's law, with lint rules and tests behind them.
 
-Source of truth for every domain fact: the newest dated folder under `docs/` — its
-`NN-prd.md` and, if it exists, `NN-data-model.md`. Never `docs/2026-08-08-setup`; that is
-the scaffold's plan of record, and `pnpm docs:check` compares it against the working tree.
+Source of truth for every domain fact: the newest dated folder under `docs/` for the
+`NN-prd.md`, and the newest `NN-data-model.md` under **any** dated folder for the data — often
+an earlier one than the PRD's. A feature folder specifies one feature and carries a data model
+only when that feature adds tables, so resolving both from the same folder makes the app's
+existing model invisible the moment a feature folder exists. Never `docs/2026-08-08-setup`;
+that is the scaffold's plan of record, and `pnpm docs:check` compares it against the working
+tree.
 
 Run artifacts live in `.cache/mock-ui/` (gitignored).
 
@@ -81,7 +85,8 @@ Run artifacts live in `.cache/mock-ui/` (gitignored).
 
 Dispatch one subagent:
 
-- Inputs (paths): the newest `docs/<date>-*/` PRD and data-model files,
+- Inputs (paths): the newest `docs/<date>-*/` PRD and the newest data-model file under any
+  `docs/<date>-*/`, resolved as above and named separately because they often differ,
   `.claude/skills/mock-ui/reference/pages.md` (Domain & brand section), and the current
   `apps/web/src/app/` and `apps/web/src/components/` trees.
 - Task: write `.cache/mock-ui/facts.md` — the fact sheet later agents build from: the run's
