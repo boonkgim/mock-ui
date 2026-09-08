@@ -1,14 +1,16 @@
 ---
 name: mock-ui
-description: Build the whole app's screens in apps/web as mock pages — route inventory and a shell contract derived from the PRD, typed mock data behind async accessors, one shared shell, then every route in its group — then review each group and verify mechanically. Use when the user says "mock ui", "ui mock", "mock pages", "mock up the screens", "scaffold the UI", or "build the pages". It writes no GraphQL and never commits; the vertical slices replace its mock data layer by layer.
+description: Build the whole app's screens as mock pages — route inventory and a shell contract derived from a PRD, typed mock data behind async accessors, one shared shell, then every route in its group — then review each group and verify mechanically. Use when the user says "mock ui", "ui mock", "mock pages", "mock up the screens", "scaffold the UI", or "build the pages". It writes no real data-fetching code and never commits; later, vertical slices replace its mock data layer by layer.
 ---
 
 # mock-ui — orchestrator
 
-Runs after `design-db`, before `feature`: builds every screen the PRD and data model imply,
-using typed mock data instead of GraphQL. Pages survive; `src/lib/mock-data.ts` does not — each
-vertical slice replaces one accessor with a `graphqlFetch` call, and the component above it
-never learns which it got.
+Runs after a data-model or schema design step and before the app is actually built out screen
+by screen: builds every screen a product brief (PRD) and, if one exists, a data model imply,
+using typed mock data instead of the app's real data layer. Pages survive; `src/lib/mock-data.ts`
+does not — each vertical slice replaces one accessor with the real data-fetching call that will
+eventually replace it (a GraphQL query, a REST call, a tRPC procedure — whatever the app uses),
+and the component above it never learns which it got.
 
 **What the mock owes: the final layout, minus design and minus the backend.** Every structural
 decision the real app will ship — the shell, the route tree, what is on each screen, where it
@@ -24,9 +26,12 @@ on gets flagged in the report and anchored to the element it is about, where it 
 run's one open-questions inspector — never as visible commentary on the screen (BP70), and never
 silently invented as domain fact (BP52).
 
-**Out of scope.** No SDL, resolvers, schema, or GraphQL operations. No edits under
-`apps/graphql`, `packages/db`, or `apps/web/src/generated/**`. No commits — `feature` owns the
-gates and commit for each slice; a mock is not a slice.
+**Out of scope.** No edits to the API/schema layer (however the host project organizes its
+backend — GraphQL SDL and resolvers, REST handlers, a database schema package) or to generated
+code. No commits — building this out into the real app is a separate, later step this skill does
+not do: whatever process the host project uses to turn a mock screen into a real one owns the
+gates and the commit for that. This skill's job ends at a working, uncommitted tree; a mock is
+not a slice.
 
 ## Two modes, decided in Phase 0
 
@@ -38,8 +43,8 @@ What differs is who owns the shell:
   demo UI is removed rather than parked inside the product's shell** (BP65). What the scaffold
   proved that is genuinely real — a working auth panel, a real payment form, a live health
   query — is kept where it is real and re-homed into a product screen; what only ever existed to
-  demonstrate the stack is deleted, and its removal is recorded wherever the plan of record
-  claims the file (BP58).
+  demonstrate the stack is deleted, and its removal is recorded wherever the host project's own
+  plan-of-record mechanism claims the file, if it has one (BP58).
 - **extension** — the app already has product screens and a shell. This run adds the routes one
   new feature needs and **conforms to the shell that exists**: it re-derives the contract by
   reading the app rather than authoring one, adds no second header, nav, page-heading or
@@ -66,18 +71,23 @@ Reference files (read by subagents, not by this turn):
 - `.claude/skills/mock-ui/reference/conventions.md` — design findings 1–5, BP1–BP73, AP1–AP32.
   Doubles as the review-loop checklist.
 
-Project skills every subagent that writes UI must read: **`code-ui`** (how UI is written here —
-the four states, messages, accessibility, layout that does not shift) and **`web`** (where files
-live, the theme contract, the vendored shadcn checkout). Where they and this skill's checklist
-disagree, **they win** — they are the repo's law, with lint rules and tests behind them.
+The host project's own UI-writing and file-layout conventions, if it has them, are law and every
+subagent that writes UI reads them first: reuse, the four states, accessibility, messages, layout
+that does not shift, where files live, a design-token contract, the vendored shadcn checkout.
+Where they and this skill's checklist disagree, **they win** — they typically have lint rules and
+tests behind them, and this skill's checklist does not. Where the host project has no conventions
+of its own for something this skill needs, `reference/conventions.md` carries a self-sufficient
+fallback (e.g. the four states for async UI) so this skill does not depend on one existing.
 
-Source of truth for every domain fact: the newest dated folder under `docs/` for the
-`NN-prd.md`, and the newest `NN-data-model.md` under **any** dated folder for the data — often
-an earlier one than the PRD's. A feature folder specifies one feature and carries a data model
-only when that feature adds tables, so resolving both from the same folder makes the app's
-existing model invisible the moment a feature folder exists. Never `docs/2026-08-08-setup`;
-that is the scaffold's plan of record, and `pnpm docs:check` compares it against the working
-tree.
+Source of truth for every domain fact: this run's own PRD — wherever the brief for this run
+lives, by the host project's own convention if it has one (a dated folder under `docs/` is a
+common one) or wherever the user points the run at — and, if one exists, the data model,
+resolved **separately**, because they are not guaranteed to be the same document: a feature-scoped
+PRD often carries a data model only when that feature adds tables, so resolving both from the
+PRD's own folder can make the app's actual, project-wide data model invisible. If the host project
+tracks a plan-of-record document that asserts against the file tree (a docs-check-style script, a
+scaffold manifest), that document is not a source of domain facts, and a file it claims is not
+edited without going through whatever exception mechanism it defines (BP58).
 
 Run artifacts live in `.cache/mock-ui/` (gitignored).
 
@@ -85,10 +95,9 @@ Run artifacts live in `.cache/mock-ui/` (gitignored).
 
 Dispatch one subagent:
 
-- Inputs (paths): the newest `docs/<date>-*/` PRD and the newest data-model file under any
-  `docs/<date>-*/`, resolved as above and named separately because they often differ,
-  `.claude/skills/mock-ui/reference/pages.md` (Domain & brand section), and the current
-  `apps/web/src/app/` and `apps/web/src/components/` trees.
+- Inputs (paths): this run's PRD and, if one exists, the data model, resolved separately as
+  above, `.claude/skills/mock-ui/reference/pages.md` (Domain & brand section), and the current
+  `src/app/` and `src/components/` trees.
 - Task: write `.cache/mock-ui/facts.md` — the fact sheet later agents build from: the run's
   **Mode** (greenfield or extension) with the evidence for it; brand/site name; currency, price
   display and tax rule; timezone/locale; the audiences the product has; per-entity column lists
@@ -99,16 +108,16 @@ Dispatch one subagent:
 - Return: the file path, its line count, the mode, the headline facts (brand, currency,
   timezone), and the gap count — at most 8 lines.
 
-If there is no PRD, stop and say so — this skill mocks a specified product; inventing the
-specification belongs to `brief-to-prd`.
+If there is no PRD, stop and say so — this skill mocks a specified product; it does not invent
+one. Producing a PRD is a separate, earlier step for whatever process the host project uses.
 
 ## Phase 1 — Inventory and shell contract (subagent, then a checkpoint)
 
 Dispatch one subagent:
 
 - Inputs (paths): `.cache/mock-ui/facts.md`, the PRD and data model,
-  `.claude/skills/mock-ui/reference/pages.md`, and the current `apps/web/src/app/` and
-  `apps/web/src/components/` trees.
+  `.claude/skills/mock-ui/reference/pages.md`, and the current `src/app/` and
+  `src/components/` trees.
 - Task: derive this run's inventory and write four files:
   - `.cache/mock-ui/pages.md` — the route table per group, in the format pages.md specifies,
     plus each group's extras and the disposition ruling for every route and component that
@@ -147,11 +156,12 @@ Dispatch one subagent:
 - Inputs (paths): `.cache/mock-ui/pages.md`, `.cache/mock-ui/facts.md`,
   `.claude/skills/mock-ui/reference/conventions.md` (BP47–BP49, BP52, BP57 and design finding 5
   govern this phase), and the PRD + data model.
-- Task: write `apps/web/src/lib/types.ts` (the domain interfaces) and
-  `apps/web/src/lib/mock-data.ts` (one module, first line `import "server-only"`, async accessor
+- Task: write `src/lib/types.ts` (the domain interfaces) and
+  `src/lib/mock-data.ts` (one module, first line `import "server-only"`, async accessor
   functions only, edge-state records so every UI state in the inventory is demonstrable).
-  Interfaces mirror the data model's columns; **never import `@nanostore/db`** — web reaches
-  data through the API, and the accessor's future is a `graphqlFetch` call, not a query.
+  Interfaces mirror the data model's columns; **never import the app's own database client or
+  ORM** — the mock stands in for the app's data layer, not its database, and each accessor is
+  shaped like the real data-fetching call that will eventually replace it, not a query.
   In extension mode, extend the existing modules rather than rewriting them.
 - Return: each file with its line count — at most 6 lines.
 
@@ -164,15 +174,17 @@ group's own review and obvious only across them.
 Dispatch one subagent:
 
 - Inputs (paths): `.cache/mock-ui/shell.md`, `.cache/mock-ui/pages.md`, `.cache/mock-ui/facts.md`,
-  `.claude/skills/mock-ui/reference/conventions.md`, and the `code-ui` and `web` skills.
+  `.claude/skills/mock-ui/reference/conventions.md`, and the host project's own UI-writing and
+  file-layout conventions, if it has them.
 - Task: build exactly what the contract names (BP61) —
-  the shell module under `apps/web/src/components/shell/`: the container, the area header, the
+  the shell module under `src/components/shell/`: the container, the area header, the
   nav pattern, the footer if the contract has one, the page heading (the app's **only** `<h1>`),
   the section heading, the footer, and the shared empty state; the run's one annotation module
   (anchor + inspector) and its flag
   (BP64); the root `not-found.tsx` and `global-error.tsx` (BP67). In **greenfield** mode it also
-  removes the scaffold's demo UI and re-homes whatever of it is real (BP65), appending the
-  reasoned line to `scripts/docs-check.ignore` for every doc-owned file it touches (BP58). A
+  removes the scaffold's demo UI and re-homes whatever of it is real (BP65), recording that
+  removal wherever the host project's own plan-of-record mechanism claims the file, if it has one
+  (BP58). A
   re-homed component's behaviour is left alone and its surface is not: it is now part of a
   product screen and is held to the same rules as one (BP71). In
   **extension** mode it writes nothing new if the app already has these — it returns the paths
@@ -187,12 +199,12 @@ After Phase 4 returns, dispatch one subagent per group from the inventory, **all
 message**. Each dispatch:
 
 - Inputs (paths): `.cache/mock-ui/pages.md` (its group's section), `.cache/mock-ui/shell.md`,
-  `.cache/mock-ui/facts.md`, `.claude/skills/mock-ui/reference/conventions.md`, the `code-ui`
-  and `web` skills, Phase 4's import list, `apps/web/src/lib/types.ts`,
-  `apps/web/src/lib/mock-data.ts`, and the PRD + data model.
-- Task: build every route of its group under `apps/web/src/app/(<group>)/` — page.tsx, the
+  `.cache/mock-ui/facts.md`, `.claude/skills/mock-ui/reference/conventions.md`, the host
+  project's own UI-writing and file-layout conventions if it has them, Phase 4's import list,
+  `src/lib/types.ts`, `src/lib/mock-data.ts`, and the PRD + data model.
+- Task: build every route of its group under `src/app/(<group>)/` — page.tsx, the
   group's layout.tsx / loading.tsx / error.tsx, not-found.tsx and actions.ts where the
-  inventory says so — plus feature components under `apps/web/src/components/<area>/`. The
+  inventory says so — plus feature components under `src/components/<area>/`. The
   group layout composes the shell module and adds only its own nav items and guard; it defines
   no container, header markup, heading or empty state of its own (BP61). Structure from the
   inventory and the contract; every domain fact from facts.md and the source docs (BP52); every
@@ -203,9 +215,9 @@ message**. Each dispatch:
   intercepted route render ONE shared component with a surface flag, so the two cannot drift.
   A row whose Surface cell is empty is an unfinished inventory — rule it before building it,
   and say in the return that the inventory was incomplete.
-- The agent owning the group that claims `/` also executes that route's disposition ruling and
-  appends the reasoned line to `scripts/docs-check.ignore` (BP58) — two pages resolving to `/`
-  is a build error, and a silently deleted doc-owned file is drift.
+- The agent owning the group that claims `/` also executes that route's disposition ruling and,
+  if the host project has a plan-of-record mechanism (BP58), records the change through it — two
+  pages resolving to `/` is a build error, and a silently deleted doc-owned file is drift.
 - Return: files written with line counts — at most 12 lines, grouping related files onto one
   line if needed.
 
@@ -214,10 +226,11 @@ message**. Each dispatch:
 For round R = 1, then R = 2, over the groups not yet passed:
 
 1. **Reviewers** — three per remaining group, all dispatched in one message:
-   - _Conventions reviewer_: inputs = `apps/web/src/app/(<group>)/`, the group's components,
+   - _Conventions reviewer_: inputs = `src/app/(<group>)/`, the group's components,
      **every other component the group's pages import that this run has not already reviewed** —
      Phase 4's re-homed list, and anything under `src/components/` outside `components/<area>/`
-     (BP71) — `.cache/mock-ui/shell.md`, `reference/conventions.md`, and the `code-ui` skill.
+     (BP71) — `.cache/mock-ui/shell.md`, `reference/conventions.md`, and the host project's own
+     UI-writing conventions, if it has them.
      A component is reviewed because a screen renders it, never because this run authored it:
      scoping the inputs by who wrote the file is how an inherited component reaches production
      unreviewed while every screen around it passes. Score every
@@ -237,7 +250,8 @@ For round R = 1, then R = 2, over the groups not yet passed:
      after the parent is subtracted — a couple of facts and one control is a finding, whatever
      the route is named — and flag every link whose destination's whole message is that there is
      nothing to do there. Include a
-     `code-ui` pass too: all four states present, every conditional message's space reserved, no
+     four-states pass too (the host project's own definition if it has one, otherwise loading /
+     empty / error / success): all four present, every conditional message's space reserved, no
      raw server error rendered.
    - _Spec-fidelity reviewer_: inputs = the same directories, `.cache/mock-ui/facts.md`, and the
      PRD + data model. Diff the built UI against the spec in **both** directions — every
@@ -296,10 +310,11 @@ After round 2, stop looping and carry unresolved rule ids + files into Phase 8.
 ## Phase 7 — Mechanical verification (script)
 
 Run `bash .claude/skills/mock-ui/scripts/verify_pages.sh`. It prints one PASS/FAIL line per
-check and writes full output to `.cache/mock-ui/verify-last.log`: the repo-root gate
-(`pnpm lint && pnpm typecheck && pnpm test`), `pnpm docs:check`, the web build, the route-file
-inventory, the shell-conformance scan (one `<h1>` owner, one annotation module, root error
-files), the breakpoint scan, and the mechanical anti-pattern scan.
+check and writes full output to `.cache/mock-ui/verify-last.log`: the host project's own
+verification gate (whatever it wires up for lint, typecheck, tests and build), its
+plan-of-record check if it has one, the web build, the route-file inventory, the
+shell-conformance scan (one `<h1>` owner, one annotation module, root error files), the
+breakpoint scan, and the mechanical anti-pattern scan.
 
 On a non-zero exit: dispatch one fixer per file or area the FAIL lines name — inputs =
 `.cache/mock-ui/verify-last.log` plus that path, return ≤ 3 lines — then rerun the script once.
@@ -316,5 +331,6 @@ a one-file edit with no page recode; and every open question is behind one flag 
 so seeing the layout as it will ship is flipping the flag, and deleting the annotations is
 deleting one directory.
 
-**Do not commit.** Hand back a working tree. The screens become real one vertical slice at a
-time, and the `feature` skill owns the gates and the commit for each.
+**Do not commit.** Hand back a working tree. Turning these screens into the real app is a
+separate, later step this skill does not do — whatever process the host project uses to build
+out a vertical slice owns the gates and the commit for each.

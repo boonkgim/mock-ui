@@ -2,9 +2,9 @@
 
 This file does not list routes, and it does not describe a shell. It says how the run's
 inventory and its shell contract are **derived** from the PRD and from the app as it stands,
-because nanostore is a scaffold: the product it ends up holding is decided by whatever PRD is in
-the newest dated folder under `docs/`, and a route list or a header layout checked in here would
-be a second, staler spec that every future product would be bent to fit.
+because the app starts life as a scaffold: the product it ends up holding is decided by whatever
+PRD this run is given, and a route list or a header layout checked in here would be a second,
+staler spec that every future product would be bent to fit.
 
 ## Contents
 
@@ -20,16 +20,18 @@ be a second, staler spec that every future product would be bent to fit.
 ## Domain & brand (binding — do not invent)
 
 - Every domain fact — the business domain, currency and price display, timezone and locale,
-  entity and field lists, delivery rules, scope — comes from the newest `docs/<date>-*/` PRD and
-  data model, distilled per run into `.cache/mock-ui/facts.md`. When they are silent, **flag the
-  gap** (BP52); never fill it from a plausible prior.
-- The brand/site name comes from the PRD. If the PRD has none, use `nanostore` — the name the
-  root layout already carries — and list the missing name as a gap, rather than coining one.
-  Coining a brand is the single easiest invention to miss in review, because it looks like
-  content rather than like a decision.
-- Money is formatted by `apps/web/src/lib/formatPrice.ts` and timestamps by
-  `apps/web/src/lib/formatUtc.ts`. Read them before writing a formatter: the currency and the
-  zone are decisions the scaffold already made, with tests behind them.
+  entity and field lists, delivery rules, scope — comes from this run's PRD and data model
+  (resolved separately; see SKILL.md), distilled per run into `.cache/mock-ui/facts.md`. When
+  they are silent, **flag the gap** (BP52); never fill it from a plausible prior.
+- The brand/site name comes from the PRD. If the PRD has none, use whatever name the app's own
+  shell already carries — the root layout's title, or the package name — and list the missing
+  name as a gap. If nothing names it either, use an obvious placeholder like `[Site Name]` and
+  flag it clearly as invented, rather than coining a plausible-sounding brand. Coining a brand is
+  the single easiest invention to miss in review, because it looks like content rather than like
+  a decision.
+- Money is formatted by `src/lib/formatPrice.ts` and timestamps by
+  `src/lib/formatUtc.ts`, if the app already has them. Read them before writing a formatter: the
+  currency and the zone are decisions the scaffold already made, with tests behind them.
 
 ## What the inventory must contain
 
@@ -121,9 +123,11 @@ A payment, an identity provider, a multi-screen wizard: those stay pages even wh
 that starts them is a dialog.
 
 **Cover the states, not just the happy path.** Every list needs an empty state, every form an
-error state, every async surface a pending one, and every mutation a success the user can see
-(`code-ui`, four states). The mock data is what makes them demonstrable (BP49), so the inventory
-says which record demonstrates which state.
+error state, every async surface a pending one, and every mutation a success the user can see. If
+the host project defines the four required states for async UI (idle/loading/empty/error or
+similar), follow that; otherwise cover loading, empty, error and success explicitly. The mock
+data is what makes them demonstrable (BP49), so the inventory says which record demonstrates
+which state.
 
 ## The shell contract
 
@@ -171,7 +175,7 @@ rather than resolved by picking a side.
 
 ## Shared structure
 
-- **One root layout.** `apps/web/src/app/layout.tsx` owns `<html>`/`<body>`, the fonts, and the
+- **One root layout.** `src/app/layout.tsx` owns `<html>`/`<body>`, the fonts, and the
   `ThemeProvider`. Route groups are directories beside it; their layouts return plain wrappers
   carrying the area shell (BP18–BP19, design finding 3). Never a second root layout — it costs
   a full page reload on every cross-area link.
@@ -179,25 +183,27 @@ rather than resolved by picking a side.
   render inside the shell (BP67). Without them an unknown URL and a layout-level crash drop the
   visitor out of the product entirely, and those are the two screens nobody remembers to look at.
 - **Metadata.** Every page exports `metadata` or `generateMetadata` with a distinct title
-  (BP22). The root layout's `title` becomes a `title.template` when the first group lands; that
-  file is claimed by the plan of record, so the edit carries a `docs-check.ignore` line with it
-  (BP58).
+  (BP22). The root layout's `title` becomes a `title.template` when the first group lands; if
+  that file is claimed by a plan-of-record mechanism the host project has, record the edit
+  through it (BP58).
 - **Dynamic segments** call `notFound()` on unknown ids and have a sibling `not-found.tsx`
   (BP9, BP17).
 - **Loading.** The group's `loading.tsx` is the baseline skeleton; a segment whose shape differs
   enough that the group skeleton would lie gets its own (BP11).
-- **Auth.** Pages that require a visitor read the session the way the `auth` skill says, and
-  every server action re-checks it (BP24) — a group layout guard is navigation, not security.
+- **Auth.** Pages that require a visitor read the session the way the host project's own
+  authentication layer expects, and every server action re-checks it (BP24) — a group layout
+  guard is navigation, not security.
 
 ## Existing UI: the disposition ruling (both modes)
 
-`apps/web` is never greenfield in the literal sense — the scaffold shipped working pages, and a
+The app is never greenfield in the literal sense — the scaffold shipped working pages, and a
 second or third run finds the previous run's screens. The inventory rules on each existing file
 explicitly rather than discovering the collision at build time. Four rulings, one line each,
 with the reason:
 
-- **off-limits** — never mocked, never moved. Route handlers another skill owns (the auth
-  proxy), and `src/generated/**`.
+- **off-limits** — never mocked, never moved. Route handlers the host project's own
+  authentication layer owns (an auth proxy, an OAuth callback), and generated code
+  (`src/generated/**` or wherever the project puts it).
 - **keep** — real product UI that already answers this question. In extension mode this is most
   of the app, and "keep" is the default: an existing header, nav, page-heading or empty-state
   component is imported, not re-authored.
@@ -208,23 +214,23 @@ with the reason:
 - **delete** — the rest of the scaffold's demo UI: diagnostic panels, "test item" links, sample
   pages whose only purpose was to prove the pipeline. In **greenfield** mode these go (BP65).
   Leaving them in the product's shell means every screen ships furniture the design pass has to
-  work around, and the layout the run hands back is not the layout that will ship. A file the
-  plan of record claims cannot simply vanish: the deletion carries a reasoned line in
-  `scripts/docs-check.ignore` (BP58), and the plan is not rewritten, because how the scaffold
-  was built did not change.
+  work around, and the layout the run hands back is not the layout that will ship. If the host
+  project tracks a plan-of-record document that claims the file, it cannot simply vanish: the
+  deletion is recorded through whatever exception mechanism that record defines (BP58), and the
+  record itself is not rewritten, because how the scaffold was built did not change.
 
 The usual `/` collision is a disposition ruling like any other: if the inventory claims `/` and
 a scaffold page already resolves there, that page is ruled **delete** or **re-home**, because two
 pages resolving to one URL is a build error (BP20).
 
-## Routes owned by another skill
+## Routes already implemented elsewhere in the app
 
 Some routes are real before the mock starts: a payment form, an OAuth callback, an identity
 proxy. The rule is not "skip them" — it is **keep the owned surface, mock the page around it**
 (BP66).
 
-The embedded widget, the redirect handler and the secret exchange stay exactly as their owning
-skill wrote them. The page they live on is still this run's: the summary of what is being
+The embedded widget, the redirect handler and the secret exchange stay exactly as whatever wrote
+them left them. The page they live on is still this run's: the summary of what is being
 committed to, the totals, the identity capture that the flow needs, the terms at the point of
 commitment, the shell around all of it, and the screen the flow returns to. Those are layout,
 they are in the PRD's journey, and a mock that leaves them out leaves out the highest-stakes
@@ -240,7 +246,7 @@ Phase 1 writes all four, and they must agree:
 - `.cache/mock-ui/pages.md` — the tables above, the extras, and the disposition rulings.
 - `.cache/mock-ui/shell.md` — the shell contract.
 - `.cache/mock-ui/routes.txt` — one repo-relative page path per line, e.g.
-  `apps/web/src/app/(public)/page.tsx`. Blank lines and `#` comments are ignored.
+  `src/app/(public)/page.tsx`. Blank lines and `#` comments are ignored.
   `verify_pages.sh` reads this file, so a route in the table and missing here is a route nothing
   checks.
 - `.cache/mock-ui/components.txt` — shadcn registry names, one per line, read by
@@ -256,14 +262,17 @@ table tabs textarea
 ```
 
 `alert`, `button`, `card`, `input` and `label` are already vendored in
-`apps/web/src/components/ui/`; the script adds only what is missing.
+`src/components/ui/`; the script adds only what is missing.
 
 Two notes before extending the list:
 
 - **`field` is not on it.** shadcn's `FieldError` returns `null` when it has nothing to say, so
-  the surrounding form resizes the moment a message appears — the exact bug `code-ui` reserves
-  space to prevent. Use it only with a reserved slot around it, and prefer the
-  label/input/reserved-line pattern the app's existing auth form already demonstrates.
-- **No form library.** This repo validates with plain state and maps error codes to its own
-  copy (`code-ui`). Do not install react-hook-form or zod for the mock: a second form philosophy
+  the surrounding form resizes the moment a message appears — exactly the layout-shift bug a
+  reserved-space convention exists to prevent. Use it only with a reserved slot around it, and
+  prefer the label/input/reserved-line pattern the app's existing auth form already demonstrates,
+  if it has one.
+- **No form library**, unless the host project already has a form-validation convention new
+  forms are expected to follow — in which case follow that instead. Absent one, this skill
+  validates with plain state and maps error codes to its own copy. Do not install
+  react-hook-form or zod for the mock: a second form philosophy
   in the same app is a fork nobody chose.

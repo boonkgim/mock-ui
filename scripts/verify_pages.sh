@@ -2,6 +2,11 @@
 # verify_pages.sh — mechanical verification for the mock-ui skill.
 # One PASS/FAIL line per check; full command output goes to the log so the orchestrator's
 # context stays small (fixer subagents read the log by path). Exits non-zero on any failure.
+#
+# The Next.js app's root defaults to the repo root; set MOCK_UI_APP_DIR (relative to the repo
+# root) if the app lives in a subdirectory, e.g. a monorepo package. The package manager is
+# detected from a lockfile — pnpm-lock.yaml, yarn.lock, package-lock.json, in that order,
+# falling back to npm — rather than assumed.
 set -uo pipefail
 # No 'set -e': every check must run so the report is complete; failures are counted instead.
 
@@ -12,14 +17,44 @@ cd "$REPO_ROOT"
 LOG=".cache/mock-ui/verify-last.log"
 ROUTES=".cache/mock-ui/routes.txt"
 SHELL_CONTRACT=".cache/mock-ui/shell.md"
+
+# APP_DIR normalizes to "" for the default (repo root == app root) so path/regex construction
+# below never carries a spurious "./" prefix that would fail to match routes.txt entries, which
+# are written repo-relative as if the Next.js app were the repo root.
+APP_DIR="${MOCK_UI_APP_DIR:-.}"
+if [ "$APP_DIR" = "." ]; then
+  APP_PREFIX=""
+else
+  APP_PREFIX="$APP_DIR/"
+fi
 # The two directories the shell contract names (BP61, BP64). They are conventions of this
-# repo's app, not of the product: change them here if the contract ever moves them, and the
-# checks below follow.
-SRC="apps/web/src"
+# skill's own output, not of the product: change them here if the contract ever moves them, and
+# the checks below follow.
+SRC="${APP_PREFIX}src"
 SHELL_DIR="$SRC/components/shell"
 MOCK_DIR="$SRC/components/mock"
 mkdir -p .cache/mock-ui
 : >"$LOG"
+
+# Package manager: detected from a lockfile, checked in the app dir first and then the repo
+# root (a monorepo's lockfile is usually at the root). Change PM directly below if this guesses
+# wrong for your setup.
+if [ -f "${APP_PREFIX}pnpm-lock.yaml" ] || [ -f pnpm-lock.yaml ]; then
+  PM=pnpm
+elif [ -f "${APP_PREFIX}yarn.lock" ] || [ -f yarn.lock ]; then
+  PM=yarn
+elif [ -f "${APP_PREFIX}package-lock.json" ] || [ -f package-lock.json ]; then
+  PM=npm
+else
+  PM=npm
+fi
+pm_run() {
+  case "$PM" in
+    pnpm) pnpm run "$@" ;;
+    yarn) yarn run "$@" ;;
+    npm)  npm run "$@" ;;
+  esac
+}
 
 FAILURES=0
 pass() { echo "PASS: $1"; }
@@ -37,7 +72,7 @@ run_check() {
 }
 
 # --- Check 1: every route in the run's inventory exists. The list is generated, not
-# hard-coded here, because the product this scaffold holds is decided by the PRD — see
+# hard-coded here, because the product this app holds is decided by the PRD — see
 # ../reference/pages.md.
 if [ ! -f "$ROUTES" ]; then
   echo "ERROR: $ROUTES missing — Phase 1 writes it. Nothing to verify against." >&2
@@ -54,13 +89,13 @@ done
 
 # --- Check 2: the root layout, and each group's shell files. The group set is derived from
 # the routes themselves, so a new group is covered without editing this script.
-if [ -f "apps/web/src/app/layout.tsx" ]; then
-  pass "root layout apps/web/src/app/layout.tsx"
+if [ -f "$SRC/app/layout.tsx" ]; then
+  pass "root layout $SRC/app/layout.tsx"
 else
-  fail "root layout apps/web/src/app/layout.tsx missing"
+  fail "root layout $SRC/app/layout.tsx missing"
 fi
 mapfile -t GROUP_DIRS < <(printf '%s\n' "${PAGES[@]}" |
-  grep -oE '^apps/web/src/app/\([^)]+\)' | sort -u)
+  grep -oE "^${SRC}/app/\([^)]+\)" | sort -u)
 for g in "${GROUP_DIRS[@]}"; do
   for f in layout.tsx loading.tsx error.tsx; do
     if [ -f "$g/$f" ]; then pass "group file $g/$f"; else fail "group file $g/$f missing"; fi
@@ -70,40 +105,52 @@ done
 # --- Check 3: no two pages resolve to '/'. A group page.tsx beside the scaffold's own
 # src/app/page.tsx is a build error, and the ruling for it is written in the inventory (BP20,
 # BP58) — this catches the case where the ruling was made but never executed.
-if printf '%s\n' "${PAGES[@]}" | grep -qE '^apps/web/src/app/\([^)]+\)/page\.tsx$' &&
-  [ -f "apps/web/src/app/page.tsx" ]; then
-  fail "apps/web/src/app/page.tsx still exists — collides with the group page at '/'"
+if printf '%s\n' "${PAGES[@]}" | grep -qE "^${SRC}/app/\([^)]+\)/page\.tsx$" &&
+  [ -f "$SRC/app/page.tsx" ]; then
+  fail "$SRC/app/page.tsx still exists — collides with the group page at '/'"
 else
   pass "no duplicate route at '/'"
 fi
 
-# --- Check 4: the plan of record. A scaffold file the mock replaced needs either a plan
-# update or a reasoned line in scripts/docs-check.ignore (BP58); this is where a silent
-# deletion shows up.
-run_check "docs:check (pnpm docs:check)" pnpm docs:check
+# --- Check 4: the host project's own plan-of-record check, if it has one. Some projects track
+# a document that asserts against the file tree (a docs-check-style script, a scaffold manifest)
+# and fail their own gate on drift; BP58 is the rule for what a mock does when it touches a file
+# that document claims. This check runs the project's own script if declared, and is a no-op
+# otherwise — nothing here assumes such a mechanism exists.
+if node -e "process.exit((require('./${APP_PREFIX}package.json').scripts||{})['docs:check']?0:1)" 2>/dev/null; then
+  run_check "plan-of-record check ($PM run docs:check)" pm_run docs:check
+else
+  echo "WARN: no 'docs:check' script in package.json — skipping the plan-of-record check" \
+    "(BP58 applies only if the host project has this kind of mechanism)." | tee -a "$LOG"
+fi
 
-# --- Checks 5-7: the repo-root gate. Root fans these out through turbo, which is the only
-# tally that answers "is the workspace green". `test:unit` rather than `test`: the
-# integration projects need local Postgres, and a mock does not commit — the full
-# `pnpm lint && pnpm typecheck && pnpm test` gate belongs to the slice that does.
-# codegen is a turbo dependency of all three, so `next typegen` needs no separate step
-# (design finding 2).
-run_check "lint (pnpm lint)" pnpm lint
-run_check "typecheck (pnpm typecheck)" pnpm typecheck
-run_check "unit tests (pnpm test:unit)" pnpm test:unit
+# --- Checks 5-7: the host project's own verification gate — whatever it wires up for lint,
+# typecheck, tests and build. Run through its own package.json scripts, so this works whether
+# the tooling behind them is a monorepo task runner, a plain tsc/eslint/test-runner chain, or
+# anything else. Prefer a "test:unit" script over "test" if the project defines one:
+# integration-style tests often need infrastructure (a database, external services) this run
+# does not have, and a mock does not commit — the full gate belongs to whatever slice later
+# makes the screen real.
+TEST_SCRIPT="test"
+if node -e "process.exit((require('./${APP_PREFIX}package.json').scripts||{})['test:unit']?0:1)" 2>/dev/null; then
+  TEST_SCRIPT="test:unit"
+fi
+run_check "lint ($PM run lint)" pm_run lint
+run_check "typecheck ($PM run typecheck)" pm_run typecheck
+run_check "unit tests ($PM run $TEST_SCRIPT)" pm_run "$TEST_SCRIPT"
 
-# --- Check 8: the web build. It is what proves the route tree actually resolves — duplicate
-# segments, bad dynamic params and client/server boundary violations surface here and
-# nowhere earlier.
-run_check "build (turbo build --filter @nanostore/web)" pnpm turbo run build --filter @nanostore/web
+# --- Check 8: the build. It is what proves the route tree actually resolves — duplicate
+# segments, bad dynamic params and client/server boundary violations surface here and nowhere
+# earlier.
+run_check "build ($PM run build)" pm_run build
 
 # --- Check 9: mechanical AI-anti-pattern scan (the [scan]-tagged AP rules). Availability is
 # probed first: the tool is a third-party package that may be unpublished or unreachable
 # offline, and its absence must not hard-fail the run — the review loop still reviews the
 # judgment-shaped rules. The palette scan that used to live here is gone on purpose: BP42 is
-# a lint rule in apps/web/eslint.config.mjs, and check 5 already runs it.
+# meant to be a lint rule in the app's eslint config, and check 5 already runs it if so.
 if npx --yes impeccable --help >>"$LOG" 2>&1; then
-  run_check "impeccable detect apps/web/src" npx --yes impeccable detect apps/web/src
+  run_check "impeccable detect $SRC" npx --yes impeccable detect "$SRC"
 else
   echo "WARN: 'npx impeccable' unavailable (offline or not resolvable) — skipping the" \
     "mechanical AP-rule scan; [scan]-tagged rules were not machine-checked this run."
@@ -114,7 +161,7 @@ fi
 # BP54 (the same fact stated twice on one screen) stays with the reviewers.
 echo "===== BP54 copy density: description literals over ~200 chars =====" >>"$LOG"
 DENSITY_HITS="$(grep -rEn --include='*.tsx' \
-  '<[A-Za-z]*Description>[^<{]{200,}<|description="[^"]{200,}"' apps/web/src || true)"
+  '<[A-Za-z]*Description>[^<{]{200,}<|description="[^"]{200,}"' "$SRC" || true)"
 if [ -n "$DENSITY_HITS" ]; then
   printf '%s\n' "$DENSITY_HITS" >>"$LOG"
   fail "BP54 copy density: paragraph-length description literal in $(printf '%s\n' \
