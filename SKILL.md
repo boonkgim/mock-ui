@@ -1,6 +1,7 @@
 ---
 name: mock-ui
 description: Build the whole app's screens as mock pages — route inventory and a shell contract derived from a PRD, typed mock data behind async accessors, one shared shell, then every route in its group — then review each group and verify mechanically. Use when the user says "mock ui", "ui mock", "mock pages", "mock up the screens", "scaffold the UI", or "build the pages". It writes no real data-fetching code and never commits; later, vertical slices replace its mock data layer by layer.
+license: MIT
 ---
 
 # mock-ui — orchestrator
