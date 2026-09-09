@@ -72,13 +72,21 @@ Reference files (read by subagents, not by this turn):
 - `.claude/skills/mock-ui/reference/conventions.md` — design findings 1–5, BP1–BP73, AP1–AP32.
   Doubles as the review-loop checklist.
 
-The host project's own UI-writing and file-layout conventions, if it has them, are law and every
-subagent that writes UI reads them first: reuse, the four states, accessibility, messages, layout
-that does not shift, where files live, a design-token contract, the vendored shadcn checkout.
-Where they and this skill's checklist disagree, **they win** — they typically have lint rules and
-tests behind them, and this skill's checklist does not. Where the host project has no conventions
-of its own for something this skill needs, `reference/conventions.md` carries a self-sufficient
-fallback (e.g. the four states for async UI) so this skill does not depend on one existing.
+This project's UI-writing skill, **`project-ui`**, is law, and every subagent that writes UI
+**invokes it** before writing anything — reading its file directly is not the same and is not
+enough; a "read this if you get to it" framing is how a subagent skims past exactly the subtle
+rule (spacing ownership, a component's own composition pattern) that matters most. `project-ui`
+covers reuse, the four states, accessibility, messages, the type ramp, touch targets, and layout
+that does not shift or overflow — including a card grid's siblings matching height with their
+action row pinned to the bottom (BP62), which is not a fresh judgement call each time a card
+grid is built, it is this rule. For file layout and the theme/token contract, also invoke
+**`project-web`** — skip its GraphQL query mechanics; this skill writes no real data-fetching
+code. Where they and this skill's checklist disagree, **they win** — they have lint rules and
+tests behind them, and this skill's checklist does not. If a host project has no UI-writing
+skill of its own — its root `CLAUDE.md`/`AGENTS.md` typically names one per area it owns ("See
+`.claude/skills/<name>/SKILL.md`"); invoke whichever it names, under whatever name that project
+gives it — `reference/conventions.md` carries a self-sufficient fallback (e.g. the four states
+for async UI) so this skill does not depend on one existing.
 
 Source of truth for every domain fact: this run's own PRD — wherever the brief for this run
 lives, by the host project's own convention if it has one (a dated folder under `docs/` is a
@@ -175,8 +183,8 @@ group's own review and obvious only across them.
 Dispatch one subagent:
 
 - Inputs (paths): `.cache/mock-ui/shell.md`, `.cache/mock-ui/pages.md`, `.cache/mock-ui/facts.md`,
-  `.claude/skills/mock-ui/reference/conventions.md`, and the host project's own UI-writing and
-  file-layout conventions, if it has them.
+  `.claude/skills/mock-ui/reference/conventions.md`, and the `project-ui` and `project-web` skills
+  (see "Context discipline" above — invoke them, do not just read their files).
 - Task: build exactly what the contract names (BP61) —
   the shell module under `src/components/shell/`: the container, the area header, the
   nav pattern, the footer if the contract has one, the page heading (the app's **only** `<h1>`),
@@ -200,9 +208,10 @@ After Phase 4 returns, dispatch one subagent per group from the inventory, **all
 message**. Each dispatch:
 
 - Inputs (paths): `.cache/mock-ui/pages.md` (its group's section), `.cache/mock-ui/shell.md`,
-  `.cache/mock-ui/facts.md`, `.claude/skills/mock-ui/reference/conventions.md`, the host
-  project's own UI-writing and file-layout conventions if it has them, Phase 4's import list,
-  `src/lib/types.ts`, `src/lib/mock-data.ts`, and the PRD + data model.
+  `.cache/mock-ui/facts.md`, `.claude/skills/mock-ui/reference/conventions.md`, the `project-ui`
+  and `project-web` skills (see "Context discipline" above — invoke them, do not just read their
+  files), Phase 4's import list, `src/lib/types.ts`, `src/lib/mock-data.ts`, and the PRD + data
+  model.
 - Task: build every route of its group under `src/app/(<group>)/` — page.tsx, the
   group's layout.tsx / loading.tsx / error.tsx, not-found.tsx and actions.ts where the
   inventory says so — plus feature components under `src/components/<area>/`. The
@@ -230,8 +239,8 @@ For round R = 1, then R = 2, over the groups not yet passed:
    - _Conventions reviewer_: inputs = `src/app/(<group>)/`, the group's components,
      **every other component the group's pages import that this run has not already reviewed** —
      Phase 4's re-homed list, and anything under `src/components/` outside `components/<area>/`
-     (BP71) — `.cache/mock-ui/shell.md`, `reference/conventions.md`, and the host project's own
-     UI-writing conventions, if it has them.
+     (BP71) — `.cache/mock-ui/shell.md`, `reference/conventions.md`, and the `project-ui` skill
+     (invoked, not just read).
      A component is reviewed because a screen renders it, never because this run authored it:
      scoping the inputs by who wrote the file is how an inherited component reaches production
      unreviewed while every screen around it passes. Score every

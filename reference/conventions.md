@@ -320,7 +320,15 @@ here, and expensive to discover missing three slices later.
   applies it. A file that lays out columns or renders a table and carries no breakpoint at all
   has not decided; it has inherited whatever the desktop markup does when squeezed, which for a
   wide table is a sideways scroll nobody chose. Deciding is cheap here and expensive later,
-  because the slice that replaces the data has no mandate to redesign the screen.
+  because the slice that replaces the data has no mandate to redesign the screen. **A card grid's
+  siblings match height, and each card's action row is pinned to its bottom edge, regardless of
+  how much text a neighbour's description holds.** A CSS grid stretches the row by default, but
+  that stretch reaches only the card's outer box — the card itself needs an explicit full-height
+  rule (e.g. `h-full`) to actually fill it, and its footer needs to be pushed to the end of the
+  card's own flex column (e.g. `mt-auto` on the footer) rather than sitting wherever the content
+  above it happens to end. Skipping either half is the same undecided-layout failure this rule
+  opens with, just at the scale of one row instead of one screen: a shorter card's button floats
+  right under its shorter text while a taller sibling's sits lower, and nobody chose that either.
 - BP63. **The design seam is used uniformly or not at all.** Whatever hook the app leaves for the
   design pass — a heading-font token, a tracking scale, a surface variant — is either on every
   screen of every group or on none. A seam wired in two areas out of three is worse than no seam:
